@@ -1,9 +1,11 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
-import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
+import { StatsCard } from './StatsCard';
 
 // --- Constants for Date Selectors ---
 const PERSIAN_MONTHS = [
@@ -22,6 +24,9 @@ const PERSIAN_MONTHS = [
 ];
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
+
+// Chart Colors
+const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6366f1'];
 
 // Helper to convert digits to Persian
 const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -117,7 +122,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
   }, [viewMode, scheduleData, fullSchedule, fromDate, toDate]);
 
-  // 2. Apply Person Filter
+  // 2. Stats Calculation (Justice Dashboard)
+  const stats = useMemo(() => {
+    const initial: Record<string, StatEntry> = {};
+    // Initialize for all shift workers to ensure they appear even if 0 shifts
+    shiftWorkers.forEach(name => {
+      initial[name] = { 
+        name, 
+        dayShifts: 0, 
+        nightShifts: 0, 
+        totalHours: 0, 
+        weightedScore: 0, 
+        offHours: 0, 
+        workedHours: 0 
+      };
+    });
+
+    // Calculate based on sourceSchedule (current view), ignoring person filter for the chart
+    sourceSchedule.forEach(entry => {
+       const dP = entry.dayShiftPerson;
+       const nP = entry.nightShiftPerson;
+
+       if (initial[dP]) {
+           initial[dP].dayShifts += 1;
+           initial[dP].totalHours += 11; 
+           initial[dP].weightedScore += 11;
+       }
+       if (initial[nP]) {
+           initial[nP].nightShifts += 1;
+           initial[nP].totalHours += 13;
+           initial[nP].weightedScore += (13 * 1.5);
+       }
+    });
+
+    return Object.values(initial).sort((a, b) => b.weightedScore - a.weightedScore);
+  }, [sourceSchedule, shiftWorkers]);
+
+  const totalShifts = stats.reduce((acc, curr) => acc + curr.dayShifts + curr.nightShifts, 0);
+  const totalHours = stats.reduce((acc, curr) => acc + curr.totalHours, 0);
+  const topPerformer = stats.length > 0 ? stats[0] : null;
+
+  // 3. Apply Person Filter for Table/List View
   const visibleSchedule = useMemo(() => {
      if (filterPerson === 'All') return sourceSchedule;
      return sourceSchedule.filter(s => 
@@ -148,7 +193,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* 1. Today Hero Section (Only show in Month view or if requested) */}
       {viewMode === 'MONTH' && <TodayHero schedule={fullSchedule} />}
 
-      {/* Main Schedule Container */}
+      {/* 2. Main Schedule Container (Moved to Top) */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:shadow-none print:border-none print:rounded-none">
         
         {/* Header Controls */}
@@ -482,7 +527,85 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </tbody>
           </table>
         </div>
+      </div>
 
+      {/* 3. Justice Dashboard (Stats & Chart) - MOVED TO BOTTOM */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
+        
+        {/* Chart Section (Pie/Doughnut) */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center min-h-[400px]">
+          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <Scale className="text-emerald-500" size={20} />
+            نمودار عدالت کاری (توزیع فشار شیفت)
+          </h3>
+          <div className="w-full h-[300px]" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={stats}
+                  dataKey="weightedScore"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={4}
+                >
+                  {stats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={2} stroke="#fff" />
+                  ))}
+                </Pie>
+                <RechartsTooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                  formatter={(value: any) => [`${value} امتیاز`, 'فشار کاری']}
+                />
+                <Legend 
+                  layout="vertical" 
+                  verticalAlign="middle" 
+                  align="right"
+                  iconType="circle"
+                  formatter={(value) => <span className="text-slate-600 font-medium text-xs mr-2">{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Stats Mosaics (2x2 Grid Square Tiles) */}
+        <div className="grid grid-cols-2 gap-4">
+             <StatsCard 
+                type="square"
+                title="کل شیفت‌ها" 
+                value={totalShifts} 
+                subtitle="روز و شب" 
+                icon={Activity} 
+                colorClass="bg-blue-500" 
+             />
+             <StatsCard 
+                type="square"
+                title="مجموع ساعات" 
+                value={totalHours} 
+                subtitle="نفر-ساعت" 
+                icon={Clock} 
+                colorClass="bg-indigo-500" 
+             />
+             <StatsCard 
+                type="square"
+                title="بیشترین کارکرد" 
+                value={topPerformer ? topPerformer.name.split(' ').slice(-1)[0] : '---'} 
+                subtitle={`${topPerformer ? topPerformer.weightedScore : 0} امتیاز`} 
+                icon={Trophy} 
+                colorClass="bg-amber-500" 
+             />
+             <StatsCard 
+                type="square"
+                title="پرسنل فعال" 
+                value={stats.filter(s => s.dayShifts + s.nightShifts > 0).length} 
+                subtitle="دارای شیفت" 
+                icon={Users} 
+                colorClass="bg-emerald-500" 
+             />
+        </div>
       </div>
 
     </div>
