@@ -26,13 +26,13 @@ const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart
 // Helper to convert digits to Persian
 const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
 
-// Reusable Date Select Component for Dashboard (High Contrast)
+// Reusable Date Select Component for Dashboard (Coordinated Style)
 const DashboardDateSelect = ({ value, onChange, options, width = "w-[60px]" }: { value: string, onChange: (val: string) => void, options: any[], width?: string }) => (
   <div className={`relative h-9 ${width}`}>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-full appearance-none bg-white border-2 border-slate-700 hover:border-black rounded-lg px-1 text-sm font-bold text-black focus:ring-2 focus:ring-black focus:border-black outline-none transition-all cursor-pointer text-center dir-ltr"
+        className="w-full h-full appearance-none bg-white border border-slate-300 hover:border-emerald-500 rounded-lg px-1 text-sm font-bold text-slate-700 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all cursor-pointer text-center dir-ltr"
         style={{ textAlign: 'center', textAlignLast: 'center' }}
       >
         {options.map((o) => (
@@ -241,7 +241,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <span>فیلتر تاریخ:</span>
                          </div>
                          
-                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
                             <span className="text-xs font-bold text-slate-500 mx-1">از:</span>
                             <DashboardDateSelect width="w-[50px]" value={fromDate.d} onChange={(v) => handleDateFilterChange('FROM', 'd', v)} options={PERSIAN_DAYS} />
                             <DashboardDateSelect width="w-[85px]" value={fromDate.m} onChange={(v) => handleDateFilterChange('FROM', 'm', v)} options={PERSIAN_MONTHS} />
@@ -250,7 +250,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                          <div className="hidden md:block w-4 h-0.5 bg-slate-300 rounded-full"></div>
 
-                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
                             <span className="text-xs font-bold text-slate-500 mx-1">تا:</span>
                             <DashboardDateSelect width="w-[50px]" value={toDate.d} onChange={(v) => handleDateFilterChange('TO', 'd', v)} options={PERSIAN_DAYS} />
                             <DashboardDateSelect width="w-[85px]" value={toDate.m} onChange={(v) => handleDateFilterChange('TO', 'm', v)} options={PERSIAN_MONTHS} />
@@ -271,7 +271,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <div className="hidden xl:block w-px h-8 bg-slate-200 mx-2"></div>
 
                      {/* Person Filter */}
-                     <div className="flex items-center w-full xl:w-auto bg-slate-50 rounded-lg px-2 border border-slate-100">
+                     <div className="flex items-center w-full xl:w-auto bg-slate-50 rounded-lg px-2 border border-slate-200">
                        <Filter size={16} className="text-slate-400 mr-2 ml-1" />
                        <select 
                          className="bg-transparent border-none text-sm text-slate-700 font-medium focus:ring-0 cursor-pointer w-full py-2"
@@ -430,10 +430,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </td>
 
                     <td 
-                      className={`p-4 print:p-1 text-center align-middle print:border print:border-black
+                      className={`p-4 print:p-1 text-center align-middle print:border print:border-black print:text-xs print:font-bold
                         ${isFriday ? 'text-red-500' : ''}
                         ${isManualHoliday ? 'text-pink-700' : ''}
-                        ${!isFriday && !isManualHoliday ? 'text-slate-600' : ''}
+                        ${!isFriday && !isManualHoliday ? 'text-slate-600 print:text-black' : ''}
                       `} 
                     >
                       {toPersianDigits(entry.date)}
@@ -467,7 +467,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <ShiftUserCard name={entry.onCallPerson} type="Supervisor" />
                              </div>
                              <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0 w-full">
-                                <span className="details text-xs font-bold truncate text-gray-500">{entry.onCallPerson.replace('مهندس', '').trim()}</span>
+                                <span className="details text-xs font-bold truncate text-gray-500 print:text-black">{entry.onCallPerson.replace('مهندس', '').trim()}</span>
                             </div>
                         </div>
                     </td>

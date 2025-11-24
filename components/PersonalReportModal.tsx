@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ShiftEntry, PersonName } from '../types';
-import { X, Printer, Clock, AlertCircle, CalendarRange, FileDown, Filter, ChevronDown } from 'lucide-react';
+import { X, Printer, Clock, AlertCircle, FileDown, Filter, ChevronDown } from 'lucide-react';
 
 interface PersonalReportModalProps {
   isOpen: boolean;
@@ -37,14 +37,14 @@ const CompactDateSelect = ({ value, onChange, options, label, width = 'w-20' }: 
         {label && <label className="text-[10px] text-black font-black mb-1 text-center">{label}</label>}
         <div className={`relative h-8 ${width}`}>
             <select 
-                className="w-full h-full appearance-none bg-white border border-slate-400 rounded-md py-0 px-2 text-xs font-bold text-black focus:ring-1 focus:ring-black outline-none cursor-pointer text-center"
+                className="w-full h-full appearance-none bg-white border border-slate-300 rounded-md py-0 px-2 text-xs font-bold text-slate-700 focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer text-center"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 style={{ textAlign: 'center', textAlignLast: 'center' }}
             >
                 {options.map(o => <option key={o.value || o} value={o.value || o} className="text-black bg-white">{o.label || o}</option>)}
             </select>
-            <div className="absolute left-1 top-1/2 -translate-y-1/2 pointer-events-none text-black">
+            <div className="absolute left-1 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
                 <ChevronDown size={10} strokeWidth={2} />
             </div>
         </div>
@@ -288,13 +288,13 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0">
       
       {/* Overlay to close on click outside */}
-      <div className="absolute inset-0" onClick={onClose}></div>
+      <div className="absolute inset-0 print:hidden" onClick={onClose}></div>
       
       {/* Modal Container - Max height 80vh to ensure it fits */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden print:max-h-none print:max-w-none print:shadow-none">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden print:fixed print:inset-0 print:h-full print:w-full print:max-h-none print:max-w-none print:shadow-none print:z-[9999] print:bg-white">
         
         {/* Fixed Header */}
         <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
