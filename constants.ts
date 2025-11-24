@@ -1,0 +1,35 @@
+import { ShiftEntry } from './types';
+
+export const SCHEDULE_DATA: ShiftEntry[] = [
+  { "id": 1, "dayName": "شنبه", "date": "1404/09/01", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 2, "dayName": "یک‌شنبه", "date": "1404/09/02", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 3, "dayName": "دوشنبه", "date": "1404/09/03", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 4, "dayName": "سه‌شنبه", "date": "1404/09/04", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 5, "dayName": "چهارشنبه", "date": "1404/09/05", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 6, "dayName": "پنج‌شنبه", "date": "1404/09/06", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 7, "dayName": "جمعه", "date": "1404/09/07", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس منصوری", "isHoliday": true },
+  { "id": 8, "dayName": "شنبه", "date": "1404/09/08", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 9, "dayName": "یک‌شنبه", "date": "1404/09/09", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 10, "dayName": "دوشنبه", "date": "1404/09/10", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 11, "dayName": "سه‌شنبه", "date": "1404/09/11", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 12, "dayName": "چهارشنبه", "date": "1404/09/12", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 13, "dayName": "پنج‌شنبه", "date": "1404/09/13", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 14, "dayName": "جمعه", "date": "1404/09/14", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس گودرزی", "isHoliday": true },
+  { "id": 15, "dayName": "شنبه", "date": "1404/09/15", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 16, "dayName": "یک‌شنبه", "date": "1404/09/16", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 17, "dayName": "دوشنبه", "date": "1404/09/17", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 18, "dayName": "سه‌شنبه", "date": "1404/09/18", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 19, "dayName": "چهارشنبه", "date": "1404/09/19", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 20, "dayName": "پنج‌شنبه", "date": "1404/09/20", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 21, "dayName": "جمعه", "date": "1404/09/21", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس منصوری", "isHoliday": true },
+  { "id": 22, "dayName": "شنبه", "date": "1404/09/22", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 23, "dayName": "یک‌شنبه", "date": "1404/09/23", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 24, "dayName": "دوشنبه", "date": "1404/09/24", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 25, "dayName": "سه‌شنبه", "date": "1404/09/25", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 26, "dayName": "چهارشنبه", "date": "1404/09/26", "dayShiftPerson": "مهندس لسانی", "nightShiftPerson": "مهندس سلیمان فلاح", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 27, "dayName": "پنج‌شنبه", "date": "1404/09/27", "dayShiftPerson": "مهندس دهقان", "nightShiftPerson": "مهندس سامان", "onCallPerson": "مهندس گودرزی", "isHoliday": false },
+  { "id": 28, "dayName": "جمعه", "date": "1404/09/28", "dayShiftPerson": "مهندس سلیمان فلاح", "nightShiftPerson": "مهندس سالاروند", "onCallPerson": "مهندس گودرزی", "isHoliday": true },
+  { "id": 29, "dayName": "شنبه", "date": "1404/09/29", "dayShiftPerson": "مهندس سامان", "nightShiftPerson": "مهندس لسانی", "onCallPerson": "مهندس منصوری", "isHoliday": false },
+  { "id": 30, "dayName": "یک‌شنبه", "date": "1404/09/30", "dayShiftPerson": "مهندس سالاروند", "nightShiftPerson": "مهندس دهقان", "onCallPerson": "مهندس منصوری", "isHoliday": false }
+
+];

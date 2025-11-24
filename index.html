@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Production & PWA Meta Tags -->
+    <meta name="theme-color" content="#10b981" />
+    <meta name="description" content="سامانه مدیریت شیفت تولید - برنامه ریزی و گزارش دهی پرسنل" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>سامانه شیفت تولید</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Vazirmatn', sans-serif;
+        background-color: #f3f4f6;
+      }
+      
+      /* Print Styles - Refactored for Stability */
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 0mm; 
+        }
+
+        html, body {
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          background-color: white !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* --- Global Print Hides --- */
+        .no-print, 
+        .main-navbar,
+        .print-hidden {
+          display: none !important;
+        }
+
+        /* --- DASHBOARD MODE (Default) --- */
+        /* If we are NOT specifically in modal mode, we assume dashboard print */
+        body:not(.print-mode-modal) .modal-root {
+            display: none !important;
+        }
+
+        body:not(.print-mode-modal) .main-content {
+            display: block !important;
+        }
+
+        body:not(.print-mode-modal).print-mode-dashboard .dashboard-container {
+            width: 155% !important;
+            transform: scale(0.65) !important;
+            transform-origin: top center !important;
+            margin-left: -27.5% !important; /* Center scaling */
+            margin-top: 5mm;
+        }
+        
+        body:not(.print-mode-modal).print-mode-dashboard .dashboard-container table {
+             font-size: 8pt !important;
+        }
+        
+        body:not(.print-mode-modal).print-mode-dashboard .user-card-print {
+            display: flex !important;
+            justify-content: center;
+        }
+
+        /* --- MODAL REPORT MODE --- */
+        body.print-mode-modal .main-content {
+            display: none !important;
+        }
+
+        body.print-mode-modal .modal-root {
+            display: block !important;
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: white !important;
+            z-index: 9999 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+        }
+
+        body.print-mode-modal .modal-content {
+            box-shadow: none !important;
+            border: none !important;
+            width: 100% !important;
+            max-width: none !important;
+            padding: 10mm !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
+        body.print-mode-modal .modal-overlay {
+            display: none !important;
+        }
+
+        body.print-mode-modal .modal-scroll-area {
+             overflow: visible !important;
+             height: auto !important;
+        }
+        
+        /* Table Styles */
+        table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+        }
+        
+        th, td {
+          border: 1px solid #000 !important;
+          color: black !important;
+        }
+        
+        thead th {
+            background-color: #f0f0f0 !important;
+            border-bottom: 2px solid #000 !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
