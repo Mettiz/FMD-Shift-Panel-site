@@ -392,24 +392,24 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-2">
-              <div className="bg-emerald-600 text-white px-2 py-1 rounded-lg min-w-[48px] flex items-center justify-center">
-                 <span className="font-bold text-xl leading-none" style={{ fontFamily: '"Times New Roman", Times, serif' }}>FMD</span>
+              <div className="bg-emerald-600 text-white px-2 py-1 rounded-lg min-w-[40px] sm:min-w-[48px] flex items-center justify-center">
+                 <span className="font-bold text-lg sm:text-xl leading-none" style={{ fontFamily: '"Times New Roman", Times, serif' }}>FMD</span>
               </div>
-              <h1 className="text-xl font-black text-slate-800 tracking-tight">
+              <h1 className="text-sm sm:text-xl font-black text-slate-800 tracking-tight">
                 سامانه شیفت تولید
               </h1>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button 
                 onClick={() => setActiveTab('dashboard')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 داشبورد
               </button>
               <button 
                 onClick={() => setActiveTab('settings')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 تنظیمات
               </button>

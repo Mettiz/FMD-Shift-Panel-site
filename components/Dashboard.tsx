@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
 import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2 } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Sector } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
 import { StatsCard } from './StatsCard';
@@ -70,6 +70,44 @@ const DashboardDateSelect = ({ value, onChange, options, width = "w-[60px]" }: {
   </div>
 );
 
+// Custom Active Shape for Pie Chart
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
+  const name = payload.name.replace('مهندس', '').trim();
+
+  return (
+    <g>
+      <text x={cx} y={cy} dy={-8} textAnchor="middle" fill="#334155" style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'inherit' }}>
+        {name}
+      </text>
+      <text x={cx} y={cy} dy={14} textAnchor="middle" fill="#94a3b8" style={{ fontSize: '11px', fontFamily: 'inherit', direction: 'rtl' }}>
+        {toPersianDigits(value)} ساعت
+      </text>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 5}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        cornerRadius={4}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 7}
+        outerRadius={outerRadius + 11}
+        fill={fill}
+        fillOpacity={0.2}
+        cornerRadius={8}
+      />
+    </g>
+  );
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ 
   scheduleData, 
   fullSchedule,
@@ -92,6 +130,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [viewMode, setViewMode] = useState<'MONTH' | 'RANGE'>('MONTH');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
+  // Chart Interaction State
+  const [activeIndex, setActiveIndex] = useState(0);
+
   // UI States (What the user is selecting)
   // Initialize with current year
   const [fromDate, setFromDate] = useState({ y: String(year), m: '01', d: '01' });
@@ -124,6 +165,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       else onNextMonth();
       // Switch back to month view
       setViewMode('MONTH');
+  };
+
+  const onPieClick = (_: any, index: number) => {
+    setActiveIndex(index);
   };
 
   // --- Data Derivation ---
@@ -174,12 +219,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
        }
     });
 
-    return Object.values(initial).sort((a, b) => b.weightedScore - a.weightedScore);
+    return Object.values(initial).sort((a, b) => b.totalHours - a.totalHours);
   }, [sourceSchedule, shiftWorkers]);
 
   const totalShifts = stats.reduce((acc, curr) => acc + curr.dayShifts + curr.nightShifts, 0);
   const totalHours = stats.reduce((acc, curr) => acc + curr.totalHours, 0);
-  const topPerformer = stats.length > 0 ? stats[0] : null;
+  
+  // Handle ties for top performer based on Total Hours
+  const maxHours = stats.length > 0 ? stats[0].totalHours : 0;
+  const topPerformers = stats.filter(s => s.totalHours === maxHours && maxHours > 0);
+  
+  let topPerformerValue = '---';
+  let topPerformerSubtitle = '۰ ساعت';
+
+  if (topPerformers.length > 0) {
+      if (topPerformers.length === 1) {
+          topPerformerValue = topPerformers[0].name.split(' ').slice(-1)[0];
+          topPerformerSubtitle = `${toPersianDigits(maxHours)} ساعت`;
+      } else {
+          topPerformerValue = `${toPersianDigits(topPerformers.length)} نفر`;
+          topPerformerSubtitle = `مشترک (${toPersianDigits(maxHours)} ساعت)`;
+      }
+  }
 
   // 3. Apply Person Filter for Table/List View
   const visibleSchedule = useMemo(() => {
@@ -224,9 +285,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {/* Left: Title & Month Nav */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-2">
-                   <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                     <Calendar className="text-emerald-600" size={24}/>
-                     <span className="hidden sm:inline">سامانه شیفت تولید</span>
+                   <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
+                     <Calendar className="text-emerald-600 w-5 h-5 sm:w-6 sm:h-6" />
+                     <span className="text-sm sm:text-lg">سامانه شیفت تولید</span>
                    </h2>
                 </div>
                 
@@ -306,7 +367,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          </div>
                          
                          <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                            <span className="text-xs font-bold text-slate-500 mx-1">از:</span>
+                            <span className="text-xs font-bold text-slate-50 mx-1">از:</span>
                             <DashboardDateSelect width="w-[50px]" value={fromDate.d} onChange={(v) => handleDateFilterChange('FROM', 'd', v)} options={PERSIAN_DAYS} />
                             <DashboardDateSelect width="w-[85px]" value={fromDate.m} onChange={(v) => handleDateFilterChange('FROM', 'm', v)} options={PERSIAN_MONTHS} />
                             <DashboardDateSelect width="w-[65px]" value={fromDate.y} onChange={(v) => handleDateFilterChange('FROM', 'y', v)} options={availableYears} />
@@ -315,7 +376,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          <div className="hidden md:block w-4 h-0.5 bg-slate-300 rounded-full"></div>
 
                          <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                            <span className="text-xs font-bold text-slate-500 mx-1">تا:</span>
+                            <span className="text-xs font-bold text-slate-50 mx-1">تا:</span>
                             <DashboardDateSelect width="w-[50px]" value={toDate.d} onChange={(v) => handleDateFilterChange('TO', 'd', v)} options={PERSIAN_DAYS} />
                             <DashboardDateSelect width="w-[85px]" value={toDate.m} onChange={(v) => handleDateFilterChange('TO', 'm', v)} options={PERSIAN_MONTHS} />
                             <DashboardDateSelect width="w-[65px]" value={toDate.y} onChange={(v) => handleDateFilterChange('TO', 'y', v)} options={availableYears} />
@@ -413,19 +474,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {visibleSchedule.length > 0 ? (
             visibleSchedule.map((entry) => {
              const isFriday = entry.dayName === 'جمعه';
-             const isManualHoliday = entry.isHoliday && !isFriday;
+             const isThursday = entry.dayName === 'پنج‌شنبه';
              
+             // Styling Logic
+             const isRedTheme = isFriday || entry.isHoliday;
+             const isPurpleTheme = isThursday && !entry.isHoliday;
+
              return (
                <div 
                  key={entry.id} 
                  className={`bg-white rounded-xl shadow-sm border p-4 space-y-4 transition-opacity duration-300
-                    ${isFriday ? 'border-red-200 bg-red-50/10' : 'border-slate-200'} 
-                    ${isManualHoliday ? 'border-pink-300 bg-pink-50' : ''}
+                    ${isRedTheme ? 'border-red-200 bg-red-50/30' : ''} 
+                    ${isPurpleTheme ? 'border-purple-200 bg-purple-50/50' : ''}
+                    ${!isRedTheme && !isPurpleTheme ? 'border-slate-200' : ''}
                  `}
                >
                  <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                    <div className="flex items-center gap-2">
-                     <span className={`font-bold ${isFriday ? 'text-red-500' : 'text-slate-700'}`}>{entry.dayName}</span>
+                     <span className={`font-bold 
+                        ${isRedTheme ? 'text-red-600' : ''} 
+                        ${isPurpleTheme ? 'text-purple-700' : ''}
+                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-700' : ''}
+                     `}>{entry.dayName}</span>
                      <span className="text-sm text-slate-500 font-mono">{entry.date}</span>
                    </div>
                  </div>
@@ -484,21 +554,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {visibleSchedule.length > 0 ? (
                 visibleSchedule.map((entry) => {
                 const isFriday = entry.dayName === 'جمعه';
-                const isManualHoliday = entry.isHoliday && !isFriday;
+                const isThursday = entry.dayName === 'پنج‌شنبه';
+                
+                // Styling Logic
+                const isRedTheme = isFriday || entry.isHoliday;
+                const isPurpleTheme = isThursday && !entry.isHoliday;
                 
                 return (
                   <tr 
                     key={entry.id} 
                     className={`hover:bg-slate-50 transition-all duration-300 break-inside-avoid
-                      ${isFriday ? 'bg-red-50/30 print:bg-transparent' : ''}
-                      ${isManualHoliday ? 'bg-pink-100 print:bg-pink-100' : ''}
+                      ${isRedTheme ? 'bg-red-50/30 print:bg-transparent' : ''}
+                      ${isPurpleTheme ? 'bg-purple-50/30 print:bg-transparent' : ''}
                     `}
                   >
                     <td 
                       className={`p-4 print:p-1 font-medium text-center align-middle print:border print:border-black
-                        ${isFriday ? 'text-red-500' : ''}
-                        ${isManualHoliday ? 'text-pink-700' : ''}
-                        ${!isFriday && !isManualHoliday ? 'text-slate-700' : ''}
+                        ${isRedTheme ? 'text-red-600' : ''}
+                        ${isPurpleTheme ? 'text-purple-700' : ''}
+                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-700' : ''}
                       `}
                     >
                       {entry.dayName}
@@ -506,9 +580,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                     <td 
                       className={`p-4 print:p-1 text-center align-middle print:border print:border-black print:text-xs print:font-bold
-                        ${isFriday ? 'text-red-500' : ''}
-                        ${isManualHoliday ? 'text-pink-700' : ''}
-                        ${!isFriday && !isManualHoliday ? 'text-slate-600 print:text-black' : ''}
+                        ${isRedTheme ? 'text-red-600' : ''}
+                        ${isPurpleTheme ? 'text-purple-700' : ''}
+                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-600 print:text-black' : ''}
                       `} 
                     >
                       {toPersianDigits(entry.date)}
@@ -574,31 +648,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <PieChart>
                 <Pie
                   data={stats}
-                  dataKey="weightedScore"
+                  dataKey="totalHours"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius="55%"
+                  innerRadius="60%"
                   outerRadius="80%"
                   paddingAngle={3}
                   stroke="none"
+                  activeIndex={activeIndex}
+                  activeShape={renderActiveShape}
+                  onClick={onPieClick}
+                  cursor="pointer"
                 >
                   {stats.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <RechartsTooltip 
-                  cursor={false}
-                  contentStyle={{ 
-                    borderRadius: '12px', 
-                    border: 'none', 
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    fontFamily: 'var(--font-vazir)',
-                    fontSize: '12px',
-                    padding: '8px'
-                  }}
-                  formatter={(value: any) => [`${value} امتیاز`, 'امتیاز وزنی']}
-                />
                 <Legend 
                   layout="vertical" 
                   verticalAlign="middle" 
@@ -638,15 +704,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
              <StatsCard 
                 type="square"
                 title="بیشترین کارکرد" 
-                value={topPerformer ? topPerformer.name.split(' ').slice(-1)[0] : '---'} 
-                subtitle={`${topPerformer ? topPerformer.weightedScore : 0} امتیاز`} 
+                value={topPerformerValue} 
+                subtitle={topPerformerSubtitle} 
                 icon={Trophy} 
                 colorClass="bg-amber-500" 
              />
              <StatsCard 
                 type="square"
                 title="پرسنل فعال" 
-                value={stats.filter(s => s.dayShifts + s.nightShifts > 0).length} 
+                value={toPersianDigits(stats.filter(s => s.dayShifts + s.nightShifts > 0).length)} 
                 subtitle="دارای شیفت" 
                 icon={Users} 
                 colorClass="bg-emerald-500" 
