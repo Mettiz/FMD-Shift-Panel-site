@@ -1,7 +1,7 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
-import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users } from 'lucide-react';
+import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
@@ -25,8 +25,29 @@ const PERSIAN_MONTHS = [
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
-// Chart Colors
-const CHART_COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6366f1'];
+// Expanded Palette for unique colors per person (20 Distinct Colors)
+const CHART_COLORS = [
+  '#2563eb', // Blue 600
+  '#e11d48', // Rose 600
+  '#059669', // Emerald 600
+  '#d97706', // Amber 600
+  '#7c3aed', // Violet 600
+  '#0891b2', // Cyan 600
+  '#4f46e5', // Indigo 600
+  '#db2777', // Pink 600
+  '#65a30d', // Lime 600
+  '#ea580c', // Orange 600
+  '#0d9488', // Teal 600
+  '#9333ea', // Purple 600
+  '#be123c', // Rose 700
+  '#1d4ed8', // Blue 700
+  '#b45309', // Amber 700
+  '#0e7490', // Cyan 700
+  '#4338ca', // Indigo 700
+  '#15803d', // Green 700
+  '#a21caf', // Fuchsia 700
+  '#c2410c', // Orange 700
+];
 
 // Helper to convert digits to Persian
 const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -71,9 +92,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [viewMode, setViewMode] = useState<'MONTH' | 'RANGE'>('MONTH');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
-  // Initialize with "Today"
-  const [fromDate, setFromDate] = useState({ y: '1404', m: '01', d: '01' });
-  const [toDate, setToDate] = useState({ y: '1404', m: '01', d: '01' });
+  // UI States (What the user is selecting)
+  // Initialize with current year
+  const [fromDate, setFromDate] = useState({ y: String(year), m: '01', d: '01' });
+  const [toDate, setToDate] = useState({ y: String(year), m: '01', d: '01' });
+
+  // Applied States (What the table is actually showing)
+  const [appliedFromDate, setAppliedFromDate] = useState({ y: String(year), m: '01', d: '01' });
+  const [appliedToDate, setAppliedToDate] = useState({ y: String(year), m: '01', d: '01' });
 
   // Available years from data
   const availableYears = useMemo(() => {
@@ -82,22 +108,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return sorted.length > 0 ? sorted : [String(year)]; 
   }, [fullSchedule, year]);
 
-  // Set default date to today on mount
-  useEffect(() => {
-    const now = new Date();
-    const parts = now.toLocaleDateString('fa-IR-u-nu-latn').split('/');
-    if (parts.length === 3) {
-       const def = { y: parts[0], m: parts[1], d: parts[2] };
-       setFromDate(def);
-       setToDate(def);
-    }
-  }, []);
-
   const handleDateFilterChange = (type: 'FROM' | 'TO', field: 'y'|'m'|'d', val: string) => {
       if (type === 'FROM') setFromDate(prev => ({ ...prev, [field]: val }));
       else setToDate(prev => ({ ...prev, [field]: val }));
-      
-      // Automatically switch to range view when user touches filters
+  };
+
+  const applyDateFilter = () => {
+      setAppliedFromDate(fromDate);
+      setAppliedToDate(toDate);
       setViewMode('RANGE');
   };
 
@@ -115,12 +133,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (viewMode === 'MONTH') {
           return scheduleData;
       } else {
-          const start = `${fromDate.y}/${fromDate.m}/${fromDate.d}`;
-          const end = `${toDate.y}/${toDate.m}/${toDate.d}`;
+          // USE APPLIED STATES, not draft states
+          const start = `${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`;
+          const end = `${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`;
           // Filter full schedule
           return fullSchedule.filter(s => s.date >= start && s.date <= end).sort((a, b) => a.date.localeCompare(b.date));
       }
-  }, [viewMode, scheduleData, fullSchedule, fromDate, toDate]);
+  }, [viewMode, scheduleData, fullSchedule, appliedFromDate, appliedToDate]); // Changed dependency
 
   // 2. Stats Calculation (Justice Dashboard)
   const stats = useMemo(() => {
@@ -301,16 +320,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <DashboardDateSelect width="w-[85px]" value={toDate.m} onChange={(v) => handleDateFilterChange('TO', 'm', v)} options={PERSIAN_MONTHS} />
                             <DashboardDateSelect width="w-[65px]" value={toDate.y} onChange={(v) => handleDateFilterChange('TO', 'y', v)} options={availableYears} />
                          </div>
-
-                         {viewMode === 'RANGE' && (
+                        
+                         {/* Action Buttons (Side by Side) */}
+                         <div className="flex items-center gap-1">
                              <button 
-                               onClick={() => setViewMode('MONTH')}
-                               className="p-1.5 text-red-500 hover:bg-red-50 rounded-full transition"
-                               title="لغو فیلتر تاریخ (بازگشت به ماه جاری)"
+                                onClick={applyDateFilter}
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-full transition"
+                                title="اعمال فیلتر زمانی (تایید)"
                              >
-                               <XCircle size={20} />
+                                <CheckCircle2 size={24} />
                              </button>
-                         )}
+
+                             {viewMode === 'RANGE' && (
+                                 <button 
+                                   onClick={() => setViewMode('MONTH')}
+                                   className="p-1.5 text-red-500 hover:bg-red-50 rounded-full transition"
+                                   title="لغو فیلتر تاریخ (بازگشت به ماه جاری)"
+                                 >
+                                   <XCircle size={24} />
+                                 </button>
+                             )}
+                         </div>
                      </div>
 
                      <div className="hidden xl:block w-px h-8 bg-slate-200 mx-2"></div>
@@ -338,7 +368,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {viewMode === 'RANGE' && (
              <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">
                  <Search size={16} />
-                 <span>نمایش نتایج فیلتر شده از <b>{toPersianDigits(`${fromDate.y}/${fromDate.m}/${fromDate.d}`)}</b> تا <b>{toPersianDigits(`${toDate.y}/${toDate.m}/${toDate.d}`)}</b></span>
+                 <span>نمایش نتایج فیلتر شده از <b>{toPersianDigits(`${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`)}</b> تا <b>{toPersianDigits(`${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`)}</b></span>
              </div>
           )}
 
@@ -362,7 +392,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  </h2>
                  {viewMode === 'RANGE' && (
                      <div className="inline-block bg-white border-2 border-black text-black px-6 py-2 rounded-lg text-lg font-bold shadow-sm">
-                        بازه: {toPersianDigits(`${fromDate.y}/${fromDate.m}/${fromDate.d}`)} تا {toPersianDigits(`${toDate.y}/${toDate.m}/${toDate.d}`)}
+                        بازه: {toPersianDigits(`${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`)} تا {toPersianDigits(`${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`)}
                      </div>
                  )}
                  {filterPerson !== 'All' && (
@@ -533,12 +563,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
         
         {/* Chart Section (Pie/Doughnut) */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center min-h-[400px]">
-          <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <Scale className="text-emerald-500" size={20} />
-            نمودار عدالت کاری (توزیع فشار شیفت)
+        <div className="bg-white p-3 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
+          <h3 className="text-sm sm:text-lg font-bold text-slate-800 mb-2 sm:mb-4 flex items-center gap-2">
+            <Scale className="text-emerald-500" size={18} />
+            نمودار توزیع کاری
           </h3>
-          <div className="w-full h-[300px]" dir="ltr">
+          {/* Fix: Added min-w-0 to allow flex item shrinking, and explicit style to fix Recharts width(-1) error */}
+          <div className="w-full h-[200px] sm:h-[300px] min-w-0" dir="ltr" style={{ minWidth: 0, minHeight: '200px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -547,24 +578,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={4}
+                  innerRadius="55%"
+                  outerRadius="80%"
+                  paddingAngle={3}
+                  stroke="none"
                 >
                   {stats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={2} stroke="#fff" />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <RechartsTooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                  formatter={(value: any) => [`${value} امتیاز`, 'فشار کاری']}
+                  cursor={false}
+                  contentStyle={{ 
+                    borderRadius: '12px', 
+                    border: 'none', 
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    fontFamily: 'var(--font-vazir)',
+                    fontSize: '12px',
+                    padding: '8px'
+                  }}
+                  formatter={(value: any) => [`${value} امتیاز`, 'امتیاز وزنی']}
                 />
                 <Legend 
                   layout="vertical" 
                   verticalAlign="middle" 
                   align="right"
                   iconType="circle"
-                  formatter={(value) => <span className="text-slate-600 font-medium text-xs mr-2">{value}</span>}
+                  iconSize={6}
+                  wrapperStyle={{ 
+                    fontSize: '10px', 
+                    lineHeight: '16px',
+                    paddingLeft: '10px'
+                  }}
+                  formatter={(value) => <span className="text-slate-600 font-medium mr-1">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>

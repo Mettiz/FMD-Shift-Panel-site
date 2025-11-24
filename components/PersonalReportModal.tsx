@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ShiftEntry, PersonName } from '../types';
-import { X, Printer, Clock, AlertCircle, FileDown, Filter, ChevronDown } from 'lucide-react';
+import { X, Printer, Clock, FileDown, Filter, ChevronDown } from 'lucide-react';
 
 interface PersonalReportModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface PersonalReportModalProps {
   monthName: string;
 }
 
-type FilterType = 'VIEW' | 'ALL' | 'CUSTOM';
+type FilterType = 'VIEW' | 'CUSTOM';
 
 const PERSIAN_MONTHS = [
   { value: '01', label: 'فروردین' },
@@ -99,10 +99,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
   // 1. Determine the list of shifts to analyze based on FilterType
   const targetSchedule = useMemo(() => {
     switch (filterType) {
-        case 'ALL':
-            // Return full history sorted by date
-            return [...fullSchedule].sort((a, b) => a.date.localeCompare(b.date));
-        
         case 'CUSTOM':
             if (!customStart && !customEnd) return schedule;
             return fullSchedule.filter(s => {
@@ -268,8 +264,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
     if (filterType === 'VIEW') {
             fileName += `-${monthName.replace(/\s+/g, '_')}`;
-    } else if (filterType === 'ALL') {
-            fileName += '-All_Records';
     } else if (filterType === 'CUSTOM') {
             const start = customStart ? customStart.replace(/\//g, '-') : 'Start';
             const end = customEnd ? customEnd.replace(/\//g, '-') : 'End';
@@ -336,7 +330,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 
                 <div className="flex gap-1 w-full sm:w-auto justify-center">
                     <button onClick={() => setFilterType('VIEW')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'VIEW' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>ماه جاری</button>
-                    <button onClick={() => setFilterType('ALL')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'ALL' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>کل</button>
                     <button onClick={() => setFilterType('CUSTOM')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'CUSTOM' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>دستی</button>
                 </div>
 
@@ -372,7 +365,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
              <div className="text-left">
                  <div className="text-sm font-bold border border-black px-3 py-1 rounded mb-2">
                     {filterType === 'VIEW' ? `بازه: ${monthName}` : 
-                     filterType === 'ALL' ? 'بازه: کل سابقه' : 
                      `بازه: ${customStart || '...'} تا ${customEnd || '...'}`}
                  </div>
                  <p className="text-xs text-black font-medium">تاریخ چاپ: {new Date().toLocaleDateString('fa-IR')}</p>
@@ -382,15 +374,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-3 md:p-6 print:p-0 print:overflow-visible bg-white">
           
-          {/* Guide */}
-          <div className="mb-6 bg-blue-50 border-r-4 border-blue-500 p-3 text-xs text-blue-900 flex items-start gap-2 print:hidden rounded">
-              <AlertCircle size={16} className="shrink-0 mt-0.5 text-blue-600" />
-              <div className="leading-5">
-                  <span className="font-bold block mb-1">محاسبه ساعت کاری:</span>
-                  تعطیل/پنج‌شنبه (روز ۱۱، شب ۱۳) | عادی (۹ ساعت) | قانون ۴۸ساعت (تا ۱۹:۰۰ = ۱۱ ساعت)
-              </div>
-          </div>
-
           {/* Summary Table */}
           <div className="mb-6 overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
              <table className="w-full text-center text-xs min-w-[500px]">
