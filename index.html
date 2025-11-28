@@ -20,16 +20,16 @@
         background-color: #f3f4f6;
       }
       
-      /* Print Styles - Refactored for Stability */
+      /* Print Styles - Optimized for Full Page A4 */
       @media print {
         @page {
           size: A4 portrait;
-          margin: 0mm; 
+          margin: 5mm; /* Minimal margins to maximize space */
         }
 
         html, body {
           width: 210mm;
-          min-height: 297mm;
+          height: 100%;
           margin: 0 !important;
           padding: 0 !important;
           background-color: white !important;
@@ -44,31 +44,42 @@
           display: none !important;
         }
 
-        /* --- DASHBOARD MODE (Default) --- */
-        /* If we are NOT specifically in modal mode, we assume dashboard print */
+        /* --- DASHBOARD MODE (Schedule Table) --- */
         body:not(.print-mode-modal) .modal-root {
             display: none !important;
         }
 
         body:not(.print-mode-modal) .main-content {
             display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
         }
 
         body:not(.print-mode-modal).print-mode-dashboard .dashboard-container {
-            width: 155% !important;
-            transform: scale(0.65) !important;
-            transform-origin: top center !important;
-            margin-left: -27.5% !important; /* Center scaling */
-            margin-top: 5mm;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Force table to fit width and look clean */
+        body:not(.print-mode-modal).print-mode-dashboard table {
+             width: 100% !important;
+             font-size: 10pt !important;
+             border-collapse: collapse !important;
         }
         
-        body:not(.print-mode-modal).print-mode-dashboard .dashboard-container table {
-             font-size: 8pt !important;
+        body:not(.print-mode-modal).print-mode-dashboard th,
+        body:not(.print-mode-modal).print-mode-dashboard td {
+             padding: 2px 4px !important; /* Compact padding */
+             border: 1px solid #000 !important;
         }
         
         body:not(.print-mode-modal).print-mode-dashboard .user-card-print {
             display: flex !important;
             justify-content: center;
+            align-items: center;
+            height: 100%;
         }
 
         /* --- MODAL REPORT MODE --- */
@@ -82,34 +93,25 @@
             top: 0 !important;
             left: 0 !important;
             width: 100% !important;
-            height: auto !important;
             background: white !important;
             z-index: 9999 !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
         }
 
         body.print-mode-modal .modal-content {
             box-shadow: none !important;
             border: none !important;
             width: 100% !important;
-            max-width: none !important;
-            padding: 10mm !important;
+            padding: 0 !important;
             margin: 0 !important;
-            display: block !important;
         }
 
         body.print-mode-modal .modal-overlay {
             display: none !important;
         }
-
-        body.print-mode-modal .modal-scroll-area {
-             overflow: visible !important;
-             height: auto !important;
-        }
         
-        /* Table Styles */
+        /* General Table Styles for Print */
         table {
           width: 100% !important;
           border-collapse: collapse !important;
@@ -123,6 +125,7 @@
         thead th {
             background-color: #f0f0f0 !important;
             border-bottom: 2px solid #000 !important;
+            color: black !important;
         }
       }
     </style>

@@ -435,29 +435,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         </div>
 
-        {/* Improved Print Header - DYNAMIC */}
-        <div className="hidden print:flex flex-col items-center justify-center w-full mb-6 border-b-2 border-black pb-4 pt-4">
-             <div className="flex justify-between items-end w-full px-4 mb-4">
-                 <h1 className="text-3xl font-black text-black">سامانه شیفت تولید</h1>
-                 <div className="text-sm font-bold text-black border border-black px-2 py-1 rounded">
+        {/* Improved Print Header - COMPACT */}
+        <div className="hidden print:flex flex-col items-center justify-center w-full mb-2 border-b-2 border-black pb-2 pt-2">
+             <div className="flex justify-between items-end w-full px-2 mb-1">
+                 <h1 className="text-2xl font-black text-black">سامانه شیفت تولید</h1>
+                 <div className="text-xs font-bold text-black border border-black px-2 py-1 rounded">
                      تاریخ چاپ: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
                  </div>
              </div>
              
-             <div className="w-full text-center mb-2">
-                 <h2 className="text-xl font-black text-black mb-2">
+             <div className="w-full text-center">
+                 <h2 className="text-lg font-black text-black mb-1">
                      {viewMode === 'MONTH' 
                         ? `برنامه شیفت: ${monthName} ${toPersianDigits(year)}`
                         : 'گزارش کارکرد (بازه انتخابی)'
                      }
                  </h2>
                  {viewMode === 'RANGE' && (
-                     <div className="inline-block bg-white border-2 border-black text-black px-6 py-2 rounded-lg text-lg font-bold shadow-sm">
+                     <div className="inline-block bg-white border border-black text-black px-4 py-1 rounded-lg text-sm font-bold shadow-sm">
                         بازه: {toPersianDigits(`${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`)} تا {toPersianDigits(`${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`)}
                      </div>
                  )}
                  {filterPerson !== 'All' && (
-                     <div className="mt-2 text-sm font-bold text-slate-700">فیلتر پرسنل: {filterPerson}</div>
+                     <div className="mt-1 text-xs font-bold text-slate-700">فیلتر پرسنل: {filterPerson}</div>
                  )}
              </div>
         </div>
@@ -533,21 +533,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-emerald-600 text-white print:bg-slate-100 print:text-black">
-                <th className="p-4 print:p-2 font-medium w-24 text-center print:border print:border-black">روز</th>
-                <th className="p-4 print:p-2 font-medium w-32 text-center print:border print:border-black">تاریخ</th>
-                <th className="p-4 print:p-2 font-medium bg-amber-500/20 text-amber-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
+                <th className="p-4 print:p-1 font-medium w-16 text-center print:border print:border-black">روز</th>
+                <th className="p-4 print:p-1 font-medium w-24 text-center print:border print:border-black">تاریخ</th>
+                <th className="p-4 print:p-1 font-medium bg-amber-500/20 text-amber-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Sun size={16} className="print:hidden"/>
                     شیفت روز (۰۸-۱۹)
                   </div>
                 </th>
-                <th className="p-4 print:p-2 font-medium bg-indigo-900/20 text-indigo-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
+                <th className="p-4 print:p-1 font-medium bg-indigo-900/20 text-indigo-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Moon size={16} className="print:hidden"/>
                     شیفت شب (۱۹-۰۸)
                   </div>
                 </th>
-                <th className="p-4 print:p-2 font-medium w-48 border-l border-emerald-500/30 print:border print:border-black text-center">سرپرست</th>
+                <th className="p-4 print:p-1 font-medium w-32 border-l border-emerald-500/30 print:border print:border-black text-center">سرپرست</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 print:divide-slate-300">
@@ -569,7 +569,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     `}
                   >
                     <td 
-                      className={`p-4 print:p-1 font-medium text-center align-middle print:border print:border-black
+                      className={`p-4 print:p-0.5 font-medium text-center align-middle print:border print:border-black
                         ${isRedTheme ? 'text-red-600' : ''}
                         ${isPurpleTheme ? 'text-purple-700' : ''}
                         ${!isRedTheme && !isPurpleTheme ? 'text-slate-700' : ''}
@@ -579,7 +579,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </td>
 
                     <td 
-                      className={`p-4 print:p-1 text-center align-middle print:border print:border-black print:text-xs print:font-bold
+                      className={`p-4 print:p-0.5 text-center align-middle print:border print:border-black print:text-xs print:font-bold
                         ${isRedTheme ? 'text-red-600' : ''}
                         ${isPurpleTheme ? 'text-purple-700' : ''}
                         ${!isRedTheme && !isPurpleTheme ? 'text-slate-600 print:text-black' : ''}
@@ -593,7 +593,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                              <div className="print:hidden h-full">
                                 <ShiftUserCard name={entry.dayShiftPerson} originalName={entry.originalDayShiftPerson} type="Day" />
                              </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0 w-full">
+                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
                                 <span className="details text-xs font-bold truncate">{entry.dayShiftPerson.replace('مهندس', '').trim()}</span>
                             </div>
                         </div>
@@ -604,7 +604,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                              <div className="print:hidden h-full">
                                 <ShiftUserCard name={entry.nightShiftPerson} originalName={entry.originalNightShiftPerson} type="Night" />
                              </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0 w-full">
+                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
                                 <span className="details text-xs font-bold truncate">{entry.nightShiftPerson.replace('مهندس', '').trim()}</span>
                             </div>
                         </div>
@@ -615,7 +615,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                              <div className="print:hidden h-full">
                                 <ShiftUserCard name={entry.onCallPerson} type="Supervisor" />
                              </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0 w-full">
+                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
                                 <span className="details text-xs font-bold truncate text-gray-500 print:text-black">{entry.onCallPerson.replace('مهندس', '').trim()}</span>
                             </div>
                         </div>
