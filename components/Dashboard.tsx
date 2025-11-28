@@ -282,7 +282,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <CalendarRange size={24} />
                </div>
                <div>
-                  <h2 className="text-lg font-black text-slate-800 tracking-tight">برنامه شیفت {monthName} {year}</h2>
+                  <h2 className="text-sm md:text-lg font-black text-slate-800 tracking-tight">برنامه شیفت {monthName} {year}</h2>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                      {filteredSchedule.length} رکورد نمایش داده شده
                   </p>
@@ -387,35 +387,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
                              </button>
                          )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200">
-                          <span className="text-xs font-bold text-slate-400">از:</span>
-                          <DashboardDateSelect value={fromDate.day} onChange={(v) => setFromDate({...fromDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
-                          <DashboardDateSelect value={fromDate.month} onChange={(v) => setFromDate({...fromDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
-                          <DashboardDateSelect value={fromDate.year} onChange={(v) => setFromDate({...fromDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
-                          
-                          <span className="text-xs font-bold text-slate-400 mx-1">تا:</span>
-                          
-                          <DashboardDateSelect value={toDate.day} onChange={(v) => setToDate({...toDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
-                          <DashboardDateSelect value={toDate.month} onChange={(v) => setToDate({...toDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
-                          <DashboardDateSelect value={toDate.year} onChange={(v) => setToDate({...toDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
+                      
+                      <div className="flex flex-col xl:flex-row gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                              {/* From Group */}
+                              <div className="flex items-center gap-1 justify-center md:justify-start">
+                                  <span className="text-xs font-bold text-slate-400 min-w-[20px]">از:</span>
+                                  <DashboardDateSelect value={fromDate.day} onChange={(v) => setFromDate({...fromDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
+                                  <DashboardDateSelect value={fromDate.month} onChange={(v) => setFromDate({...fromDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
+                                  <DashboardDateSelect value={fromDate.year} onChange={(v) => setFromDate({...fromDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
+                              </div>
+                              
+                              {/* To Group */}
+                              <div className="flex items-center gap-1 justify-center md:justify-start">
+                                  <span className="text-xs font-bold text-slate-400 min-w-[20px]">تا:</span>
+                                  <DashboardDateSelect value={toDate.day} onChange={(v) => setToDate({...toDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
+                                  <DashboardDateSelect value={toDate.month} onChange={(v) => setToDate({...toDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
+                                  <DashboardDateSelect value={toDate.year} onChange={(v) => setToDate({...toDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
+                              </div>
+                          </div>
 
-                          <div className="mr-auto flex gap-1">
+                          <div className="mr-auto flex gap-1 justify-end w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-200">
                                 <button 
                                     onClick={() => {
                                         setAppliedFilter(null);
                                         setViewMode('MONTH');
                                     }}
-                                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-red-400 hover:text-red-500 transition"
+                                    className="h-9 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-red-400 hover:text-red-500 transition gap-1"
                                     title="لغو فیلتر"
                                 >
                                     <XCircle size={18} />
+                                    <span className="text-xs font-bold xl:hidden">لغو</span>
                                 </button>
                                 <button 
                                     onClick={handleApplyFilter}
-                                    className="w-8 h-8 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition"
+                                    className="h-9 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition gap-1"
                                     title="اعمال فیلتر"
                                 >
                                     <CheckCircle2 size={18} />
+                                    <span className="text-xs font-bold xl:hidden">اعمال</span>
                                 </button>
                           </div>
                       </div>
@@ -612,6 +622,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         onClick={onPieClick}
                         onMouseEnter={onPieClick}
                       >
+                         <div style={{ width: '100%', height: '100%' }}></div>
                         {chartData.map((entry, index) => (
                           <Cell 
                               key={`cell-${index}`} 
@@ -678,3 +689,4 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
     </div>
   );
+}
