@@ -445,28 +445,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <TodayHero schedule={fullSchedule} />
 
             {/* Print Header (Visible only in Print) */}
-            <div className="hidden print:flex flex-row justify-between items-end mb-2 border-b-2 border-black pb-2 px-2">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-xl font-black text-black">سامانه مدیریت شیفت تولید</h1>
-                    <span className="text-xs font-bold text-gray-600">واحد فنی و مهندسی (FMD)</span>
-                </div>
-                
-                <div className="flex flex-col items-center pb-1">
-                    <h2 className="text-2xl font-black text-black mb-1">{monthName} {year}</h2>
-                    <span className="text-[10px] font-bold border border-black rounded px-2 py-0.5 bg-gray-50">
-                        {getPrintDateRange()}
-                    </span>
+            <div className="hidden print:flex flex-row justify-between items-center mb-4 border border-black rounded-lg p-3">
+                {/* Right */}
+                <div className="flex flex-col items-start gap-1">
+                    <h1 className="text-lg font-black text-black">برنامه شیفت</h1>
+                    <span className="text-sm font-bold text-black">واحد تولید FMD</span>
                 </div>
 
-                <div className="flex flex-col items-end gap-1 text-[10px] font-bold text-black">
-                     <div className="flex items-center gap-1">
-                        <span>تاریخ گزارش:</span>
-                        <span dir="ltr">{new Date().toLocaleDateString('fa-IR')}</span>
-                     </div>
-                     <div className="flex items-center gap-1">
-                         <span>تعداد پرسنل:</span>
-                         <span>{shiftWorkers.length} نفر</span>
-                     </div>
+                {/* Center */}
+                <div className="flex items-center justify-center">
+                    <h2 className="text-2xl font-black text-black">{monthName} {toPersianDigits(year)}</h2>
+                </div>
+
+                {/* Left */}
+                <div className="flex flex-col items-end gap-2">
+                     <span className="text-xs font-bold border border-black rounded px-2 py-1 bg-gray-50">
+                        {getPrintDateRange()}
+                     </span>
+                     <span className="text-[10px] font-bold text-black">
+                        تاریخ گزارش: {new Date().toLocaleDateString('fa-IR')}
+                     </span>
                 </div>
             </div>
 
@@ -501,7 +499,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        // Styling Logic
                        let rowClass = 'hover:bg-slate-50 transition-colors'; // Default
                        if (isFriday || isHoliday) {
-                           rowClass = 'bg-red-50 hover:bg-red-100 text-red-900 print:bg-gray-100 print:text-black'; // Print should mostly remain b/w but logic requests red visual, now using gray for print visibility
+                           rowClass = 'bg-red-50 hover:bg-red-100 text-red-900 print:bg-gray-200 print:text-black'; // Print uses gray to distinguish
                        } else if (isThursday) {
                            rowClass = 'bg-[#f3e8ff] hover:bg-purple-100 text-purple-900 print:bg-white print:text-black';
                        }
@@ -511,10 +509,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            <td className={`p-4 print:p-0.5 border-l font-bold ${isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
                               <div className="flex flex-col items-center justify-center">
                                   <span>{entry.dayName}</span>
-                                  {entry.isHoliday && <span className="text-[8px] print:block hidden font-normal mt-0.5">(تعطیل)</span>}
+                                  {/* Holiday Text Removed for Print */}
                               </div>
                            </td>
-                           <td className="p-4 print:p-0.5 border-l font-mono text-slate-500 print:text-black" dir="ltr">
+                           <td className="p-4 print:p-0.5 border-l md:font-mono text-slate-500 print:text-black" dir="ltr">
                               {entry.date}
                            </td>
                            <td className="p-2 print:p-0.5 border-l print:border-black">
