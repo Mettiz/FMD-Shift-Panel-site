@@ -272,6 +272,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="dashboard-container space-y-6">
       
+      {/* Today Hero (Live Status) - Moved to Top */}
+      <TodayHero schedule={fullSchedule} />
+
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 no-print">
          
@@ -310,7 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   title="چیدمان مجدد هوشمند"
                 >
                    <RefreshCw size={16} />
-                   <span>چیدمان خودکار</span>
+                   <span className="hidden lg:inline">چیدمان خودکار</span>
                 </button>
 
                 <button 
@@ -318,7 +321,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-600'}`}
                 >
                    {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                   <span>{isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}</span>
+                   <span className="hidden lg:inline">{isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}</span>
                 </button>
                 
                 <button 
@@ -326,7 +329,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition shadow-sm whitespace-nowrap mr-auto md:mr-0"
                 >
                    <Printer size={16} />
-                   <span>چاپ برنامه</span>
+                   <span className="hidden lg:inline">چاپ برنامه</span>
                 </button>
                  
                 <button 
@@ -334,7 +337,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-sm whitespace-nowrap"
                 >
                    <FileText size={16} />
-                   <span>گزارش فردی</span>
+                   <span className="hidden lg:inline">گزارش فردی</span>
                 </button>
              </div>
 
@@ -345,7 +348,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border ${isFiltersOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}
                 >
                    <Filter size={16} />
-                   <span>فیلترهای پیشرفته</span>
+                   <span className="hidden lg:inline">فیلترهای پیشرفته</span>
                    {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
              </div>
@@ -441,9 +444,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Left: Schedule Table (3 cols wide) */}
         <div className="lg:col-span-3 space-y-6">
             
-            {/* Today Hero */}
-            <TodayHero schedule={fullSchedule} />
-
             {/* Print Header (Visible only in Print) */}
             <div className="hidden print:grid grid-cols-3 items-center mb-2 border border-black rounded-lg p-3">
                 {/* Right (In RTL this is first) */}

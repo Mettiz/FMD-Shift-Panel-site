@@ -37,7 +37,7 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
   }, [schedule]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden relative mb-8 no-print">
+    <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden relative no-print">
       {/* Background Pattern */}
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500"></div>
       
