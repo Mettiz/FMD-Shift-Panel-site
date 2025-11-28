@@ -198,6 +198,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setActiveIndex(index);
   };
 
+  const handlePrintSchedule = () => {
+    const originalTitle = document.title;
+    document.title = `برنامه_شیفت_${monthName}_${year}`;
+    document.body.classList.add('print-mode-dashboard');
+    window.print();
+    setTimeout(() => {
+        document.body.classList.remove('print-mode-dashboard');
+        document.title = originalTitle;
+    }, 500);
+  };
+
   // --- Data Derivation ---
   
   // 1. Determine Source Data (Month vs Range)
@@ -340,11 +351,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
             
             <button 
-                onClick={onOpenReport}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                onClick={handlePrintSchedule}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold transition border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+                title="چاپ برنامه ماهانه"
             >
                 <Printer size={18} />
-                <span className="hidden sm:inline">گزارش</span>
+                <span className="hidden sm:inline">چاپ برنامه</span>
+            </button>
+
+            <button 
+                onClick={onOpenReport}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold transition border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                title="گزارش کارکرد پرسنل"
+            >
+                <FileText size={18} />
+                <span className="hidden sm:inline">کارکرد پرسنل</span>
             </button>
         </div>
       </div>
