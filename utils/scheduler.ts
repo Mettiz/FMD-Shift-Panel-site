@@ -1,5 +1,6 @@
 
 import { ShiftEntry, SHIFT_WEIGHTS, Personnel } from '../types';
+import { OFFICIAL_HOLIDAYS } from '../constants';
 
 export const INITIAL_STAFF: Personnel[] = [
   { name: 'مهندس لسانی', roles: ['Shift'], isActive: true },
@@ -92,6 +93,7 @@ export const generateNextMonth = (
     const dayName = WEEK_DAYS[dayOfWeekIdx];
     const isFriday = dayOfWeekIdx === 6;
     const dateStr = `${nextYear}/${nextMonthCode}/${String(currentDateIdx).padStart(2, '0')}`;
+    const isHoliday = isFriday || OFFICIAL_HOLIDAYS.includes(dateStr);
     
     // Rotate OnCall every Saturday (if applicable)
     // If it is the start of the generation loop and it is saturday, we rotate.
@@ -152,7 +154,7 @@ export const generateNextMonth = (
       dayShiftPerson: selectedDay.name,
       nightShiftPerson: selectedNight.name,
       onCallPerson: currentSupervisor,
-      isHoliday: isFriday // Default Friday logic, can be edited manually later
+      isHoliday: isHoliday 
     });
 
     // Update trackers for next iteration

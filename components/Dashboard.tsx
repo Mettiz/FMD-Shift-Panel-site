@@ -459,7 +459,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                 {/* Left */}
                 <div className="flex flex-col items-end gap-1 text-right">
-                     <div className="flex items-center gap-1 text-xs font-bold bg-gray-50 border border-black rounded px-2 py-0.5">
+                     <div className="flex items-center gap-1 text-xs font-bold bg-gray-50 rounded px-2 py-0.5">
                         <span>بازه زمانی:</span>
                         <span dir="ltr">{getPrintDateRange()}</span>
                      </div>
@@ -516,8 +516,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                   {/* Holiday Text Removed for Print */}
                               </div>
                            </td>
-                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black md:font-mono text-slate-500 print:text-black" dir="ltr">
-                              <span className="print:hidden">{entry.date}</span>
+                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-500 print:text-black" dir="ltr">
+                              <span className="print:hidden md:font-mono">{entry.date}</span>
                               <span className="hidden print:inline">{toPersianDigits(entry.date)}</span>
                            </td>
                            <td className="p-2 print:p-0.5 border border-slate-200 print:border-black">
