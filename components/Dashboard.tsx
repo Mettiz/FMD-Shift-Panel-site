@@ -445,20 +445,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <TodayHero schedule={fullSchedule} />
 
             {/* Print Header (Visible only in Print) */}
-            <div className="hidden print:flex flex-row justify-between items-center mb-2 border border-black rounded-lg p-3">
-                {/* Right */}
-                <div className="flex flex-col items-start gap-1">
+            <div className="hidden print:grid grid-cols-3 items-center mb-2 border border-black rounded-lg p-3">
+                {/* Right (In RTL this is first) */}
+                <div className="flex flex-col items-start gap-1 justify-self-start">
                     <h1 className="text-lg font-black text-black">برنامه شیفت</h1>
                     <span className="text-sm font-bold text-black">واحد تولید FMD</span>
                 </div>
 
                 {/* Center */}
-                <div className="flex items-center justify-center">
+                <div className="flex items-center justify-center justify-self-center">
                     <h2 className="text-2xl font-black text-black">{monthName} {toPersianDigits(year)}</h2>
                 </div>
 
-                {/* Left */}
-                <div className="flex flex-col items-end gap-1 text-right">
+                {/* Left (In RTL this is last) */}
+                <div className="flex flex-col items-end gap-1 text-right justify-self-end">
                      <div className="flex items-center gap-1 text-xs font-bold bg-gray-50 rounded px-2 py-0.5">
                         <span>بازه زمانی:</span>
                         <span dir="ltr">{getPrintDateRange()}</span>
@@ -478,11 +478,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <table className="w-full text-sm text-center border-collapse print:table-fixed print:text-[9pt]">
                    {/* Define columns for print to ensure they fit */}
                    <colgroup className="hidden print:table-column-group">
-                       <col style={{width: '6%'}} /> {/* Day Name */}
-                       <col style={{width: '10%'}} /> {/* Date */}
-                       <col style={{width: '28%'}} /> {/* Day Shift */}
-                       <col style={{width: '28%'}} /> {/* Night Shift */}
-                       <col style={{width: '28%'}} /> {/* Supervisor */}
+                       <col style={{width: '8%'}} /> {/* Day Name - Increased */}
+                       <col style={{width: '12%'}} /> {/* Date - Increased */}
+                       <col style={{width: '26.6%'}} /> {/* Day Shift */}
+                       <col style={{width: '26.6%'}} /> {/* Night Shift */}
+                       <col style={{width: '26.6%'}} /> {/* Supervisor */}
                    </colgroup>
                    
                    <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 print:bg-gray-100 print:text-black print:border-black">
@@ -516,7 +516,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                   {/* Holiday Text Removed for Print */}
                               </div>
                            </td>
-                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-500 print:text-black" dir="ltr">
+                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-500 print:text-black">
                               <span className="print:hidden md:font-mono">{entry.date}</span>
                               <span className="hidden print:inline">{toPersianDigits(entry.date)}</span>
                            </td>
