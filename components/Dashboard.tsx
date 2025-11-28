@@ -25,6 +25,33 @@ const PERSIAN_MONTHS = [
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
+// Official Holidays for 1404 (Extracted from Calendar)
+const OFFICIAL_HOLIDAYS_1404 = [
+  "1404/01/01", "1404/01/02", "1404/01/03", "1404/01/04", // Nowruz
+  "1404/01/10", "1404/01/11", // Eid Fetr
+  "1404/01/12", // Republic Day
+  "1404/01/13", // Nature Day
+  "1404/02/04", // Martyrdom Imam Sadeq
+  "1404/03/14", // Demise Imam Khomeini
+  "1404/03/15", // 15 Khordad
+  "1404/03/16", // Eid Ghorban
+  "1404/03/24", // Eid Ghadir
+  "1404/04/14", // Tasua
+  "1404/04/15", // Ashura
+  "1404/05/23", // Arbaeen
+  "1404/05/31", // Demise Prophet & Imam Hassan
+  "1404/06/02", // Martyrdom Imam Reza
+  "1404/06/10", // Imamate Imam Mahdi
+  "1404/06/19", // Birth Prophet
+  "1404/09/03", // Martyrdom Hazrat Fatemeh
+  "1404/10/13", // Birth Imam Ali
+  "1404/10/27", // Mabas
+  "1404/11/15", // Birth Imam Mahdi
+  "1404/11/22", // Revolution Victory
+  "1404/12/20", // Martyrdom Imam Ali
+  "1404/12/29", // Oil Nationalization
+];
+
 // Expanded Palette for unique colors per person (20 Distinct Colors)
 const CHART_COLORS = [
   '#2563eb', // Blue 600
@@ -178,545 +205,367 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (viewMode === 'MONTH') {
           return scheduleData;
       } else {
-          // USE APPLIED STATES, not draft states
           const start = `${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`;
           const end = `${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`;
-          // Filter full schedule
-          return fullSchedule.filter(s => s.date >= start && s.date <= end).sort((a, b) => a.date.localeCompare(b.date));
+          return fullSchedule.filter(s => s.date >= start && s.date <= end);
       }
-  }, [viewMode, scheduleData, fullSchedule, appliedFromDate, appliedToDate]); // Changed dependency
+  }, [viewMode, scheduleData, fullSchedule, appliedFromDate, appliedToDate]);
 
-  // 2. Stats Calculation (Justice Dashboard)
-  const stats = useMemo(() => {
-    const initial: Record<string, StatEntry> = {};
-    // Initialize for all shift workers to ensure they appear even if 0 shifts
-    shiftWorkers.forEach(name => {
-      initial[name] = { 
-        name, 
-        dayShifts: 0, 
-        nightShifts: 0, 
-        totalHours: 0, 
-        weightedScore: 0, 
-        offHours: 0, 
-        workedHours: 0 
-      };
-    });
-
-    // Calculate based on sourceSchedule (current view), ignoring person filter for the chart
-    sourceSchedule.forEach(entry => {
-       const dP = entry.dayShiftPerson;
-       const nP = entry.nightShiftPerson;
-
-       if (initial[dP]) {
-           initial[dP].dayShifts += 1;
-           initial[dP].totalHours += 11; 
-           initial[dP].weightedScore += 11;
-       }
-       if (initial[nP]) {
-           initial[nP].nightShifts += 1;
-           initial[nP].totalHours += 13;
-           initial[nP].weightedScore += (13 * 1.5);
-       }
-    });
-
-    return Object.values(initial).sort((a, b) => b.totalHours - a.totalHours);
-  }, [sourceSchedule, shiftWorkers]);
-
-  const totalShifts = stats.reduce((acc, curr) => acc + curr.dayShifts + curr.nightShifts, 0);
-  const totalHours = stats.reduce((acc, curr) => acc + curr.totalHours, 0);
-  
-  // Handle ties for top performer based on Total Hours
-  const maxHours = stats.length > 0 ? stats[0].totalHours : 0;
-  const topPerformers = stats.filter(s => s.totalHours === maxHours && maxHours > 0);
-  
-  let topPerformerValue = '---';
-  let topPerformerSubtitle = '۰ ساعت';
-
-  if (topPerformers.length > 0) {
-      if (topPerformers.length === 1) {
-          topPerformerValue = topPerformers[0].name.split(' ').slice(-1)[0];
-          topPerformerSubtitle = `${toPersianDigits(maxHours)} ساعت`;
-      } else {
-          topPerformerValue = `${toPersianDigits(topPerformers.length)} نفر`;
-          topPerformerSubtitle = `مشترک (${toPersianDigits(maxHours)} ساعت)`;
-      }
-  }
-
-  // 3. Apply Person Filter for Table/List View
-  const visibleSchedule = useMemo(() => {
-     if (filterPerson === 'All') return sourceSchedule;
-     return sourceSchedule.filter(s => 
-        s.dayShiftPerson === filterPerson || 
-        s.nightShiftPerson === filterPerson || 
-        s.onCallPerson === filterPerson
-     );
+  // 2. Filter by Person
+  const filteredSchedule = useMemo(() => {
+    if (filterPerson === 'All') return sourceSchedule;
+    return sourceSchedule.filter(s => 
+      s.dayShiftPerson === filterPerson || 
+      s.nightShiftPerson === filterPerson
+    );
   }, [sourceSchedule, filterPerson]);
 
-  const getCellOpacity = (personName: string) => {
-    if (filterPerson === 'All') return 1;
-    return personName === filterPerson ? 1 : 0.3; // Highlight specific person
-  };
+  // 3. Stats Calculation
+  const stats = useMemo(() => {
+    const map = new Map<string, StatEntry>();
+    shiftWorkers.forEach(name => {
+       map.set(name, {
+         name,
+         dayShifts: 0,
+         nightShifts: 0,
+         totalHours: 0,
+         weightedScore: 0,
+         offHours: 0,
+         workedHours: 0
+       });
+    });
 
-  // Print Handler
-  const handlePrint = () => {
-    // Only print what is currently visible
-    document.body.classList.add('print-mode-dashboard');
-    window.print();
-    setTimeout(() => {
-      document.body.classList.remove('print-mode-dashboard');
-    }, 1000);
-  };
+    sourceSchedule.forEach(entry => {
+       const dayP = map.get(entry.dayShiftPerson);
+       if (dayP) {
+           dayP.dayShifts++;
+           dayP.totalHours += SHIFT_WEIGHTS.dayHours;
+           dayP.workedHours += SHIFT_WEIGHTS.dayHours;
+           dayP.weightedScore += SHIFT_WEIGHTS.dayHours;
+       }
+       const nightP = map.get(entry.nightShiftPerson);
+       if (nightP) {
+           nightP.nightShifts++;
+           nightP.totalHours += SHIFT_WEIGHTS.nightHours;
+           nightP.workedHours += SHIFT_WEIGHTS.nightHours;
+           nightP.weightedScore += (SHIFT_WEIGHTS.nightHours * SHIFT_WEIGHTS.nightMultiplier);
+       }
+    });
+    
+    return Array.from(map.values()).sort((a,b) => b.totalHours - a.totalHours);
+  }, [sourceSchedule, shiftWorkers]);
+
+  // Handle Ties for Top Performer
+  const topPerformer = useMemo(() => {
+      if (stats.length === 0) return null;
+      const maxScore = stats[0].totalHours;
+      const winners = stats.filter(s => s.totalHours === maxScore);
+      
+      if (winners.length > 1) {
+          return {
+              name: `${toPersianDigits(winners.length)} نفر`,
+              totalHours: maxScore,
+              isShared: true
+          };
+      }
+      return {
+          name: winners[0].name,
+          totalHours: winners[0].totalHours,
+          isShared: false
+      };
+  }, [stats]);
+
+  // Workaround for Recharts TS issue
+  const PieAny = Pie as any;
 
   return (
-    <div className="space-y-6 dashboard-container">
+    <div className="space-y-6 animate-in fade-in duration-500">
       
-      {/* 1. Today Hero Section (Only show in Month view or if requested) */}
-      {viewMode === 'MONTH' && <TodayHero schedule={fullSchedule} />}
+      {/* 1. Today's Hero Section */}
+      <TodayHero schedule={fullSchedule} />
 
-      {/* 2. Main Schedule Container (Moved to Top) */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:shadow-none print:border-none print:rounded-none">
+      {/* 2. Control Bar (Month Nav, Lock, Print) */}
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
         
-        {/* Header Controls */}
-        <div className="p-4 border-b border-slate-100 flex flex-col gap-4 no-print bg-slate-50/50">
-          
-          {/* Top Row: Title & Actions */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-              
-              {/* Left: Title & Month Nav */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex items-center gap-2">
-                   <h2 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
-                     <Calendar className="text-emerald-600 w-5 h-5 sm:w-6 sm:h-6" />
-                     <span className="text-sm sm:text-lg">سامانه شیفت تولید</span>
-                   </h2>
-                </div>
-                
-                {/* Month Navigation (Active in Month Mode) */}
-                <div className={`flex items-center bg-white border border-slate-200 rounded-lg p-1 transition-opacity ${viewMode === 'RANGE' ? 'opacity-50 grayscale' : 'opacity-100'}`}>
-                    <button onClick={() => handleMonthNavigation('PREV')} className="p-1 hover:bg-slate-100 rounded-md transition text-slate-500">
-                      <ChevronRight size={20} />
-                    </button>
-                    <span className="px-3 text-sm font-bold text-slate-700 min-w-[120px] text-center">{monthName} {year}</span>
-                    <button onClick={() => handleMonthNavigation('NEXT')} className="p-1 hover:bg-slate-100 rounded-md transition text-slate-500">
-                      <ChevronLeft size={20} />
-                    </button>
-                </div>
-              </div>
+        {/* Left: Navigation */}
+        <div className="flex items-center gap-4">
+            <button onClick={() => handleMonthNavigation('PREV')} className="p-2 hover:bg-slate-100 rounded-full transition text-slate-500 hover:text-slate-800">
+                <ChevronRight size={24} />
+            </button>
+            
+            <div className="text-center min-w-[140px]">
+                <h2 className="text-lg sm:text-xl font-black text-slate-800">
+                    <span className="inline sm:hidden">{viewMode === 'MONTH' ? monthName : 'بازه'}</span>
+                    <span className="hidden sm:inline">{viewMode === 'MONTH' ? monthName : 'بازه انتخابی'}</span>
+                </h2>
+                <p className="text-sm font-bold text-slate-400 font-mono tracking-widest mt-0.5">{viewMode === 'MONTH' ? year : '---'}</p>
+            </div>
 
-              {/* Right: Actions */}
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                  {!isLocked && (
-                    <button 
-                        onClick={onRegenerate}
-                        className="p-2 rounded-lg transition-colors bg-orange-50 border border-orange-200 text-orange-600 hover:bg-orange-100"
-                        title="چیدمان مجدد (Auto Arrange)"
-                    >
-                        <RefreshCw size={20} />
-                    </button>
-                  )}
+            <button onClick={() => handleMonthNavigation('NEXT')} className="p-2 hover:bg-slate-100 rounded-full transition text-slate-500 hover:text-slate-800">
+                <ChevronLeft size={24} />
+            </button>
+        </div>
 
-                  <button 
-                    onClick={onToggleLock}
-                    className={`p-2 rounded-lg transition-colors border ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'}`}
-                    title={isLocked ? "باز کردن قفل" : "قفل کردن نهایی (ثبت)"}
-                  >
-                    {isLocked ? <Lock size={20} /> : <Unlock size={20} />}
-                  </button>
+        {/* Center: Actions */}
+        <div className="flex items-center gap-2">
+            <button 
+                onClick={onToggleLock}
+                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold transition border ${isLocked ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
+                title={isLocked ? 'باز کردن قفل ویرایش' : 'قفل کردن برنامه'}
+            >
+                {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
+                <span className="hidden sm:inline">{isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}</span>
+            </button>
 
-                  <div className="w-px h-8 bg-slate-200 mx-1"></div>
+            {!isLocked && (
+                <button 
+                    onClick={onRegenerate}
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-bold transition border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    title="چیدمان مجدد هوشمند"
+                >
+                    <RefreshCw size={18} />
+                    <span className="hidden sm:inline">چیدمان مجدد</span>
+                </button>
+            )}
+        </div>
 
-                  <button 
-                    onClick={onOpenReport}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                  >
-                    <FileText size={18} />
-                    <span className="hidden sm:inline">گزارش فردی</span>
-                  </button>
-                  
-                  <button 
-                    onClick={handlePrint}
-                    className="p-2 rounded-lg transition-colors bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
-                    title="چاپ لیست"
-                  >
-                    <Printer size={20} />
-                  </button>
-              </div>
-          </div>
-
-          {/* Filter Collapsible Section */}
-          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-             <button 
+        {/* Right: Report & Filter Toggle */}
+        <div className="flex items-center gap-2">
+            <button 
                 onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors"
-             >
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                    <Filter size={18} className="text-emerald-600" />
-                    <span>فیلترهای پیشرفته (تاریخ و پرسنل)</span>
-                </div>
-                {isFiltersOpen ? <ChevronUp size={18} className="text-slate-500" /> : <ChevronDown size={18} className="text-slate-500" />}
-             </button>
-             
-             {isFiltersOpen && (
-                 <div className="p-4 border-t border-slate-200 flex flex-col xl:flex-row items-center gap-4 justify-center animate-in slide-in-from-top-2 fade-in duration-200">
-                     
-                     {/* Date Range Selectors */}
-                     <div className="flex flex-col md:flex-row items-center gap-3 w-full xl:w-auto justify-center">
-                         <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
-                            <CalendarRange size={18} className="text-slate-400" />
-                            <span>فیلتر تاریخ:</span>
-                         </div>
-                         
-                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                            <span className="text-xs font-bold text-slate-50 mx-1">از:</span>
-                            <DashboardDateSelect width="w-[50px]" value={fromDate.d} onChange={(v) => handleDateFilterChange('FROM', 'd', v)} options={PERSIAN_DAYS} />
-                            <DashboardDateSelect width="w-[85px]" value={fromDate.m} onChange={(v) => handleDateFilterChange('FROM', 'm', v)} options={PERSIAN_MONTHS} />
-                            <DashboardDateSelect width="w-[65px]" value={fromDate.y} onChange={(v) => handleDateFilterChange('FROM', 'y', v)} options={availableYears} />
-                         </div>
-
-                         <div className="hidden md:block w-4 h-0.5 bg-slate-300 rounded-full"></div>
-
-                         <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                            <span className="text-xs font-bold text-slate-50 mx-1">تا:</span>
-                            <DashboardDateSelect width="w-[50px]" value={toDate.d} onChange={(v) => handleDateFilterChange('TO', 'd', v)} options={PERSIAN_DAYS} />
-                            <DashboardDateSelect width="w-[85px]" value={toDate.m} onChange={(v) => handleDateFilterChange('TO', 'm', v)} options={PERSIAN_MONTHS} />
-                            <DashboardDateSelect width="w-[65px]" value={toDate.y} onChange={(v) => handleDateFilterChange('TO', 'y', v)} options={availableYears} />
-                         </div>
-                        
-                         {/* Action Buttons (Side by Side) */}
-                         <div className="flex items-center gap-1">
-                             <button 
-                                onClick={applyDateFilter}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-full transition"
-                                title="اعمال فیلتر زمانی (تایید)"
-                             >
-                                <CheckCircle2 size={24} />
-                             </button>
-
-                             {viewMode === 'RANGE' && (
-                                 <button 
-                                   onClick={() => setViewMode('MONTH')}
-                                   className="p-1.5 text-red-500 hover:bg-red-50 rounded-full transition"
-                                   title="لغو فیلتر تاریخ (بازگشت به ماه جاری)"
-                                 >
-                                   <XCircle size={24} />
-                                 </button>
-                             )}
-                         </div>
-                     </div>
-
-                     <div className="hidden xl:block w-px h-8 bg-slate-200 mx-2"></div>
-
-                     {/* Person Filter */}
-                     <div className="flex items-center w-full xl:w-auto bg-slate-50 rounded-lg px-2 border border-slate-200">
-                       <Filter size={16} className="text-slate-400 mr-2 ml-1" />
-                       <select 
-                         className="bg-transparent border-none text-sm text-slate-700 font-medium focus:ring-0 cursor-pointer w-full py-2"
-                         value={filterPerson}
-                         onChange={(e) => setFilterPerson(e.target.value)}
-                       >
-                         <option value="All">نمایش همه پرسنل</option>
-                         {shiftWorkers.map(name => (
-                           <option key={name} value={name}>{name}</option>
-                         ))}
-                       </select>
-                     </div>
-
-                 </div>
-             )}
-          </div>
-          
-          {/* Active Filter Badge */}
-          {viewMode === 'RANGE' && (
-             <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">
-                 <Search size={16} />
-                 <span>نمایش نتایج فیلتر شده از <b>{toPersianDigits(`${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`)}</b> تا <b>{toPersianDigits(`${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`)}</b></span>
-             </div>
-          )}
-
-        </div>
-
-        {/* Improved Print Header - COMPACT */}
-        <div className="hidden print:flex flex-col items-center justify-center w-full mb-2 border-b-2 border-black pb-2 pt-2">
-             <div className="flex justify-between items-end w-full px-2 mb-1">
-                 <h1 className="text-2xl font-black text-black">سامانه شیفت تولید</h1>
-                 <div className="text-xs font-bold text-black border border-black px-2 py-1 rounded">
-                     تاریخ چاپ: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
-                 </div>
-             </div>
-             
-             <div className="w-full text-center">
-                 <h2 className="text-lg font-black text-black mb-1">
-                     {viewMode === 'MONTH' 
-                        ? `برنامه شیفت: ${monthName} ${toPersianDigits(year)}`
-                        : 'گزارش کارکرد (بازه انتخابی)'
-                     }
-                 </h2>
-                 {viewMode === 'RANGE' && (
-                     <div className="inline-block bg-white border border-black text-black px-4 py-1 rounded-lg text-sm font-bold shadow-sm">
-                        بازه: {toPersianDigits(`${appliedFromDate.y}/${appliedFromDate.m}/${appliedFromDate.d}`)} تا {toPersianDigits(`${appliedToDate.y}/${appliedToDate.m}/${appliedToDate.d}`)}
-                     </div>
-                 )}
-                 {filterPerson !== 'All' && (
-                     <div className="mt-1 text-xs font-bold text-slate-700">فیلتر پرسنل: {filterPerson}</div>
-                 )}
-             </div>
-        </div>
-
-        {isLocked && viewMode === 'MONTH' && (
-          <div className="bg-red-50 text-red-800 px-6 py-2 text-xs flex items-center gap-2 border-b border-red-100 no-print">
-            <Lock size={14} />
-            این ماه قفل شده است. برای ویرایش یا چیدمان مجدد، قفل را باز کنید.
-          </div>
-        )}
-
-        {/* MOBILE CARD VIEW */}
-        <div className="md:hidden space-y-4 p-4 no-print bg-slate-50">
-          {visibleSchedule.length > 0 ? (
-            visibleSchedule.map((entry) => {
-             const isFriday = entry.dayName === 'جمعه';
-             const isThursday = entry.dayName === 'پنج‌شنبه';
-             
-             // Styling Logic
-             const isRedTheme = isFriday || entry.isHoliday;
-             const isPurpleTheme = isThursday && !entry.isHoliday;
-
-             return (
-               <div 
-                 key={entry.id} 
-                 className={`bg-white rounded-xl shadow-sm border p-4 space-y-4 transition-opacity duration-300
-                    ${isRedTheme ? 'border-red-200 bg-red-50/30' : ''} 
-                    ${isPurpleTheme ? 'border-purple-200 bg-purple-50/50' : ''}
-                    ${!isRedTheme && !isPurpleTheme ? 'border-slate-200' : ''}
-                 `}
-               >
-                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                   <div className="flex items-center gap-2">
-                     <span className={`font-bold 
-                        ${isRedTheme ? 'text-red-600' : ''} 
-                        ${isPurpleTheme ? 'text-purple-700' : ''}
-                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-700' : ''}
-                     `}>{entry.dayName}</span>
-                     <span className="text-sm text-slate-500 font-mono">{entry.date}</span>
-                   </div>
-                 </div>
-
-                 <div className="space-y-3">
-                    <div className="flex flex-col gap-1 items-stretch">
-                        <span className="text-[10px] text-slate-400 font-medium text-right">سرپرست</span>
-                        <div className="w-full">
-                           <ShiftUserCard name={entry.onCallPerson} type="Supervisor" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                        <div className="flex flex-col gap-1 w-full" style={{ opacity: getCellOpacity(entry.dayShiftPerson) }}>
-                            <span className="text-[10px] text-slate-400 font-medium text-right">شیفت روز</span>
-                            <ShiftUserCard name={entry.dayShiftPerson} originalName={entry.originalDayShiftPerson} type="Day" />
-                        </div>
-
-                        <div className="flex flex-col gap-1 w-full" style={{ opacity: getCellOpacity(entry.nightShiftPerson) }}>
-                             <span className="text-[10px] text-slate-400 font-medium text-right">شیفت شب</span>
-                             <ShiftUserCard name={entry.nightShiftPerson} originalName={entry.originalNightShiftPerson} type="Night" />
-                        </div>
-                    </div>
-                 </div>
-               </div>
-             );
-          })
-          ) : (
-             <div className="text-center py-10 text-slate-400">موردی یافت نشد.</div>
-          )}
-        </div>
-
-        {/* DESKTOP & PRINT TABLE VIEW */}
-        <div className="hidden md:block overflow-x-auto print:overflow-visible print:block w-full">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-emerald-600 text-white print:bg-slate-100 print:text-black">
-                <th className="p-4 print:p-1 font-medium w-16 text-center print:border print:border-black">روز</th>
-                <th className="p-4 print:p-1 font-medium w-24 text-center print:border print:border-black">تاریخ</th>
-                <th className="p-4 print:p-1 font-medium bg-amber-500/20 text-amber-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <Sun size={16} className="print:hidden"/>
-                    شیفت روز (۰۸-۱۹)
-                  </div>
-                </th>
-                <th className="p-4 print:p-1 font-medium bg-indigo-900/20 text-indigo-50 border-l border-emerald-500/30 print:bg-transparent print:text-black print:border print:border-black text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <Moon size={16} className="print:hidden"/>
-                    شیفت شب (۱۹-۰۸)
-                  </div>
-                </th>
-                <th className="p-4 print:p-1 font-medium w-32 border-l border-emerald-500/30 print:border print:border-black text-center">سرپرست</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 print:divide-slate-300">
-              {visibleSchedule.length > 0 ? (
-                visibleSchedule.map((entry) => {
-                const isFriday = entry.dayName === 'جمعه';
-                const isThursday = entry.dayName === 'پنج‌شنبه';
-                
-                // Styling Logic
-                const isRedTheme = isFriday || entry.isHoliday;
-                const isPurpleTheme = isThursday && !entry.isHoliday;
-                
-                return (
-                  <tr 
-                    key={entry.id} 
-                    className={`hover:bg-slate-50 transition-all duration-300 break-inside-avoid
-                      ${isRedTheme ? 'bg-red-50/30 print:bg-transparent' : ''}
-                      ${isPurpleTheme ? 'bg-purple-50/30 print:bg-transparent' : ''}
-                    `}
-                  >
-                    <td 
-                      className={`p-4 print:p-0.5 font-medium text-center align-middle print:border print:border-black
-                        ${isRedTheme ? 'text-red-600' : ''}
-                        ${isPurpleTheme ? 'text-purple-700' : ''}
-                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-700' : ''}
-                      `}
-                    >
-                      {entry.dayName}
-                    </td>
-
-                    <td 
-                      className={`p-4 print:p-0.5 text-center align-middle print:border print:border-black print:text-xs print:font-bold
-                        ${isRedTheme ? 'text-red-600' : ''}
-                        ${isPurpleTheme ? 'text-purple-700' : ''}
-                        ${!isRedTheme && !isPurpleTheme ? 'text-slate-600 print:text-black' : ''}
-                      `} 
-                    >
-                      {toPersianDigits(entry.date)}
-                    </td>
-
-                    <td className="p-0 print:p-0 border-l border-slate-100 print:border print:border-black align-middle transition-opacity duration-300" style={{ opacity: getCellOpacity(entry.dayShiftPerson) }}>
-                        <div className="w-full h-full min-h-[56px] print:min-h-0">
-                             <div className="print:hidden h-full">
-                                <ShiftUserCard name={entry.dayShiftPerson} originalName={entry.originalDayShiftPerson} type="Day" />
-                             </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
-                                <span className="details text-xs font-bold truncate">{entry.dayShiftPerson.replace('مهندس', '').trim()}</span>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td className="p-0 print:p-0 border-l border-slate-100 print:border print:border-black align-middle transition-opacity duration-300" style={{ opacity: getCellOpacity(entry.nightShiftPerson) }}>
-                        <div className="w-full h-full min-h-[56px] print:min-h-0">
-                             <div className="print:hidden h-full">
-                                <ShiftUserCard name={entry.nightShiftPerson} originalName={entry.originalNightShiftPerson} type="Night" />
-                             </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
-                                <span className="details text-xs font-bold truncate">{entry.nightShiftPerson.replace('مهندس', '').trim()}</span>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td className="p-0 print:p-0 border-l border-slate-100 print:border print:border-black align-middle transition-opacity duration-300" style={{ opacity: getCellOpacity(entry.onCallPerson) }}>
-                         <div className="w-full h-full min-h-[56px] print:min-h-0">
-                             <div className="print:hidden h-full">
-                                <ShiftUserCard name={entry.onCallPerson} type="Supervisor" />
-                             </div>
-                             <div className="hidden print:flex user-card-print items-center justify-center gap-1 p-0.5 w-full h-full">
-                                <span className="details text-xs font-bold truncate text-gray-500 print:text-black">{entry.onCallPerson.replace('مهندس', '').trim()}</span>
-                            </div>
-                        </div>
-                    </td>
-                  </tr>
-                );
-              })
-              ) : (
-                 <tr>
-                     <td colSpan={5} className="p-8 text-center text-slate-400 font-bold">موردی یافت نشد.</td>
-                 </tr>
-              )}
-            </tbody>
-          </table>
+                className={`p-2 rounded-xl border transition ${isFiltersOpen ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                title="فیلترها"
+            >
+                <Filter size={20} />
+            </button>
+            
+            <button 
+                onClick={onOpenReport}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
+            >
+                <Printer size={18} />
+                <span className="hidden sm:inline">گزارش</span>
+            </button>
         </div>
       </div>
 
-      {/* 3. Justice Dashboard (Stats & Chart) - MOVED TO BOTTOM */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 no-print">
-        
-        {/* Chart Section (Pie/Doughnut) */}
-        <div className="bg-white p-3 sm:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center">
-          <h3 className="text-sm sm:text-lg font-bold text-slate-800 mb-2 sm:mb-4 flex items-center gap-2">
-            <Scale className="text-emerald-500" size={18} />
-            نمودار توزیع کاری
-          </h3>
-          {/* Fix: Added min-w-0 to allow flex item shrinking, and explicit style to fix Recharts width(-1) error */}
-          <div className="w-full h-[200px] sm:h-[300px] min-w-0" dir="ltr" style={{ minWidth: 0, minHeight: '200px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats}
-                  dataKey="totalHours"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="60%"
-                  outerRadius="80%"
-                  paddingAngle={3}
-                  stroke="none"
-                  activeIndex={activeIndex}
-                  activeShape={renderActiveShape}
-                  onClick={onPieClick}
-                  cursor="pointer"
-                >
-                  {stats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Legend 
-                  layout="vertical" 
-                  verticalAlign="middle" 
-                  align="right"
-                  iconType="circle"
-                  iconSize={6}
-                  wrapperStyle={{ 
-                    fontSize: '10px', 
-                    lineHeight: '16px',
-                    paddingLeft: '10px'
-                  }}
-                  formatter={(value) => <span className="text-slate-600 font-medium mr-1">{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* 3. Filters Panel (Collapsible) */}
+      {isFiltersOpen && (
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 animate-in slide-in-from-top-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Date Range */}
+                  <div className="space-y-2">
+                      <h3 className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                          <CalendarRange size={14} />
+                          فیلتر بازه زمانی
+                      </h3>
+                      <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                          <div className="flex items-center gap-1">
+                              <span className="text-xs font-bold text-slate-400">از:</span>
+                              <DashboardDateSelect value={fromDate.d} onChange={v => handleDateFilterChange('FROM', 'd', v)} options={PERSIAN_DAYS} width="w-12" />
+                              <DashboardDateSelect value={fromDate.m} onChange={v => handleDateFilterChange('FROM', 'm', v)} options={PERSIAN_MONTHS} width="w-20" />
+                              <DashboardDateSelect value={fromDate.y} onChange={v => handleDateFilterChange('FROM', 'y', v)} options={availableYears} width="w-16" />
+                          </div>
+                          <span className="text-slate-300">-</span>
+                          <div className="flex items-center gap-1">
+                              <span className="text-xs font-bold text-slate-400">تا:</span>
+                              <DashboardDateSelect value={toDate.d} onChange={v => handleDateFilterChange('TO', 'd', v)} options={PERSIAN_DAYS} width="w-12" />
+                              <DashboardDateSelect value={toDate.m} onChange={v => handleDateFilterChange('TO', 'm', v)} options={PERSIAN_MONTHS} width="w-20" />
+                              <DashboardDateSelect value={toDate.y} onChange={v => handleDateFilterChange('TO', 'y', v)} options={availableYears} width="w-16" />
+                          </div>
+                          <div className="flex items-center gap-1 mr-auto">
+                              <button onClick={applyDateFilter} className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full transition shadow-sm border border-transparent hover:border-blue-800">
+                                  <CheckCircle2 size={16} />
+                              </button>
+                              <button onClick={() => {
+                                  // Reset functionality can be added here if needed
+                                  setIsFiltersOpen(false);
+                              }} className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-full transition border border-slate-200">
+                                  <XCircle size={16} />
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Person Filter */}
+                  <div className="space-y-2">
+                      <h3 className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                          <Users size={14} />
+                          نمایش شخص خاص
+                      </h3>
+                      <div className="flex gap-2">
+                          <select 
+                              value={filterPerson}
+                              onChange={(e) => setFilterPerson(e.target.value)}
+                              className="w-full h-11 bg-slate-50 border border-slate-200 rounded-lg px-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                          >
+                              <option value="All">نمایش همه</option>
+                              {shiftWorkers.map(name => (
+                                  <option key={name} value={name}>{name}</option>
+                              ))}
+                          </select>
+                          {filterPerson !== 'All' && (
+                              <button onClick={() => setFilterPerson('All')} className="h-11 px-3 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg border border-red-200">
+                                  <XCircle size={20} />
+                              </button>
+                          )}
+                      </div>
+                  </div>
+              </div>
           </div>
+      )}
+
+      {/* 5. Schedule Table / List */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <h3 className="font-bold text-slate-700 flex items-center gap-2">
+                <FileText size={18} className="text-slate-400" />
+                برنامه شیفت
+            </h3>
+            <span className="text-xs font-bold bg-white px-2 py-1 rounded text-slate-500 border border-slate-200">{filteredSchedule.length} رکورد</span>
+        </div>
+        
+        <div className="divide-y divide-slate-100">
+             {filteredSchedule.length > 0 ? (
+                 filteredSchedule.map((entry) => {
+                     // Determine holiday status for styling
+                     const isOfficialHoliday = OFFICIAL_HOLIDAYS_1404.includes(entry.date);
+                     const isFriday = entry.dayName === 'جمعه';
+                     const isHoliday = entry.isHoliday || isFriday || isOfficialHoliday;
+                     const isThursday = entry.dayName === 'پنج‌شنبه';
+                     
+                     // Style Classes
+                     let rowBgClass = "hover:bg-slate-50";
+                     let dateColorClass = "text-slate-700";
+
+                     if (isHoliday) {
+                         rowBgClass = "bg-red-50/40 border-red-100";
+                         dateColorClass = "text-red-500";
+                     } else if (isThursday) {
+                         rowBgClass = "bg-purple-50/40 border-purple-100";
+                         dateColorClass = "text-purple-600";
+                     }
+
+                     return (
+                        <div key={entry.id} className={`p-4 transition flex flex-col sm:flex-row items-center gap-4 ${rowBgClass}`}>
+                            
+                            {/* Date Badge */}
+                            <div className="flex sm:flex-col items-center gap-2 sm:gap-0 w-full sm:w-24 shrink-0 justify-between sm:justify-center">
+                                <span className={`text-sm font-black ${dateColorClass}`}>
+                                    {entry.dayName}
+                                </span>
+                                <span className="text-xs font-mono text-slate-400 font-bold" dir="ltr">{entry.date}</span>
+                            </div>
+
+                            {/* Shifts */}
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                <ShiftUserCard 
+                                    name={entry.dayShiftPerson} 
+                                    type="Day" 
+                                    originalName={entry.originalDayShiftPerson}
+                                    className="w-full"
+                                />
+                                <ShiftUserCard 
+                                    name={entry.nightShiftPerson} 
+                                    type="Night" 
+                                    originalName={entry.originalNightShiftPerson}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            {/* Supervisor */}
+                            <div className="w-full sm:w-auto shrink-0 flex items-center justify-end sm:justify-center">
+                                <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg">
+                                    <span className="text-[10px] text-slate-400 font-bold">سرپرست:</span>
+                                    <span className="text-xs font-bold text-slate-700">{entry.onCallPerson}</span>
+                                </div>
+                            </div>
+                        </div>
+                     );
+                 })
+             ) : (
+                 <div className="p-8 text-center text-slate-400 font-bold flex flex-col items-center gap-2">
+                     <Search size={32} className="opacity-20" />
+                     داده‌ای برای نمایش یافت نشد.
+                 </div>
+             )}
+        </div>
+      </div>
+
+      {/* 4. Stats Overview & Charts (Moved to Bottom) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 border-t border-slate-200">
+        
+        {/* Right: Pie Chart */}
+        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center min-h-[220px] sm:min-h-[250px] sm:h-[300px] h-[200px]">
+            <h3 className="text-sm font-bold text-slate-500 mb-2 w-full text-right px-2">نمودار توزیع کاری</h3>
+            <div className="w-full h-full min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <PieChart>
+                        <PieAny
+                            activeIndex={activeIndex}
+                            activeShape={renderActiveShape}
+                            data={stats as any}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius="60%"
+                            outerRadius="80%"
+                            dataKey="totalHours"
+                            onMouseEnter={onPieClick}
+                            paddingAngle={2}
+                            stroke="none"
+                        >
+                            {stats.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} stroke="none" />
+                            ))}
+                        </PieAny>
+                        <Legend 
+                             verticalAlign="bottom" 
+                             height={36} 
+                             iconType="circle"
+                             iconSize={8}
+                             wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }}
+                        />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
         </div>
 
-        {/* Stats Mosaics (2x2 Grid Square Tiles) */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Left: Stats Cards (Mosaics) */}
+        <div className="lg:col-span-2 grid grid-cols-2 gap-4">
              <StatsCard 
                 type="square"
-                title="کل شیفت‌ها" 
-                value={totalShifts} 
-                subtitle="روز و شب" 
+                title="مجموع شیفت‌ها" 
+                value={filteredSchedule.length * 2} // Approx (Day + Night)
+                subtitle={`${filteredSchedule.length} روز کاری`}
                 icon={Activity} 
                 colorClass="bg-blue-500" 
              />
              <StatsCard 
                 type="square"
-                title="مجموع ساعات" 
-                value={totalHours} 
-                subtitle="نفر-ساعت" 
-                icon={Clock} 
-                colorClass="bg-indigo-500" 
+                title="ساعات کاری کل"
+                value={stats.reduce((acc, curr) => acc + curr.totalHours, 0)}
+                subtitle="مجموع ساعت پرسنل"
+                icon={Clock}
+                colorClass="bg-indigo-500"
              />
              <StatsCard 
                 type="square"
-                title="بیشترین کارکرد" 
-                value={topPerformerValue} 
-                subtitle={topPerformerSubtitle} 
-                icon={Trophy} 
-                colorClass="bg-amber-500" 
-             />
-             <StatsCard 
-                type="square"
-                title="پرسنل فعال" 
-                value={toPersianDigits(stats.filter(s => s.dayShifts + s.nightShifts > 0).length)} 
-                subtitle="دارای شیفت" 
+                title="نفرات فعال" 
+                value={shiftWorkers.length} 
+                subtitle={`${supervisors.length} سرپرست`}
                 icon={Users} 
                 colorClass="bg-emerald-500" 
              />
+             {topPerformer && (
+                <StatsCard 
+                    type="square"
+                    title="بیشترین کارکرد" 
+                    value={topPerformer.name} 
+                    subtitle={topPerformer.isShared ? `مشترک (${toPersianDigits(topPerformer.totalHours)} ساعت)` : `${toPersianDigits(topPerformer.totalHours)} ساعت`}
+                    icon={Trophy} 
+                    colorClass="bg-amber-500" 
+                />
+             )}
         </div>
       </div>
 
