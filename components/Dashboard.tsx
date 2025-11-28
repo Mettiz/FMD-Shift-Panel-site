@@ -296,7 +296,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <TodayHero schedule={fullSchedule} />
 
       {/* 2. Control Bar (Month Nav, Lock, Print) */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
         
         {/* Left: Navigation */}
         <div className="flex items-center gap-4">
@@ -372,7 +372,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* 3. Filters Panel (Collapsible) */}
       {isFiltersOpen && (
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 animate-in slide-in-from-top-2">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 animate-in slide-in-from-top-2 print:hidden">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Date Range */}
                   <div className="space-y-2">
@@ -436,9 +436,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
       )}
 
-      {/* 5. Schedule Table / List */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+      {/* 5. Schedule Display */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden print:shadow-none print:border-0">
+        
+        {/* Header (Screen Only) */}
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center print:hidden">
             <h3 className="font-bold text-slate-700 flex items-center gap-2">
                 <FileText size={18} className="text-slate-400" />
                 برنامه شیفت
@@ -446,7 +448,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <span className="text-xs font-bold bg-white px-2 py-1 rounded text-slate-500 border border-slate-200">{filteredSchedule.length} رکورد</span>
         </div>
         
-        <div className="divide-y divide-slate-100">
+        {/* Mobile/Desktop List View (Screen Only) */}
+        <div className="divide-y divide-slate-100 print:hidden">
              {filteredSchedule.length > 0 ? (
                  filteredSchedule.map((entry) => {
                      // Determine holiday status for styling
@@ -511,10 +514,60 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  </div>
              )}
         </div>
+
+        {/* Print-Only Table View */}
+        <div className="hidden print:block w-full">
+            <div className="mb-4 text-center border-b-2 border-black pb-2">
+                <h1 className="text-xl font-black">برنامه شیفت تولید - {monthName} {year}</h1>
+            </div>
+            <table className="w-full text-right border-collapse text-xs">
+                <thead>
+                    <tr className="bg-gray-100">
+                        <th className="p-2 border border-black font-bold">روز</th>
+                        <th className="p-2 border border-black font-bold">تاریخ</th>
+                        <th className="p-2 border border-black font-bold">شیفت روز (۱۹ - ۰۸)</th>
+                        <th className="p-2 border border-black font-bold">شیفت شب (۰۸ - ۱۹)</th>
+                        <th className="p-2 border border-black font-bold">سرپرست</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredSchedule.map((entry) => {
+                        const isOfficialHoliday = OFFICIAL_HOLIDAYS_1404.includes(entry.date);
+                        const isFriday = entry.dayName === 'جمعه';
+                        const isHoliday = entry.isHoliday || isFriday || isOfficialHoliday;
+                        
+                        let rowClass = "";
+                        let textClass = "";
+                        
+                        if (isHoliday) {
+                            rowClass = "bg-gray-100"; // Greyscale for print friendly highlighting
+                            textClass = "font-black"; // Bold for holidays
+                        }
+                        
+                        return (
+                            <tr key={entry.id} className={rowClass}>
+                                <td className={`p-2 border border-black ${textClass}`}>
+                                    {entry.dayName} {isHoliday ? '(تعطیل)' : ''}
+                                </td>
+                                <td className="p-2 border border-black font-mono">{entry.date}</td>
+                                <td className="p-2 border border-black">{entry.dayShiftPerson}</td>
+                                <td className="p-2 border border-black">{entry.nightShiftPerson}</td>
+                                <td className="p-2 border border-black">{entry.onCallPerson}</td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
+            <div className="mt-8 flex justify-between px-8 text-sm font-bold">
+                 <div>امضاء تنظیم کننده</div>
+                 <div>امضاء تأیید کننده</div>
+                 <div>امضاء مدیریت</div>
+            </div>
+        </div>
       </div>
 
       {/* 4. Stats Overview & Charts (Moved to Bottom) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 border-t border-slate-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 border-t border-slate-200 print:hidden">
         
         {/* Right: Pie Chart */}
         <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center min-h-[220px] sm:min-h-[250px] sm:h-[300px] h-[200px]">
