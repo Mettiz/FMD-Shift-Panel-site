@@ -457,7 +457,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {/* Desktop Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden md:block print:block print:shadow-none print:border-0">
                <div className="overflow-x-auto print:overflow-visible">
-                 <table className="w-full text-sm text-center border-collapse print:text-[9pt] print:table-fixed">
+                 <table className="w-full text-sm text-center border-collapse print:text-[8pt] print:table-fixed">
                    {/* Define columns for print to ensure they fit */}
                    <colgroup className="hidden print:table-column-group">
                        <col style={{width: '6%'}} /> {/* Day Name */}
@@ -469,11 +469,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                    
                    <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 print:bg-gray-100 print:text-black print:border-black">
                      <tr>
-                       <th className="p-4 print:p-1 border-l">روز</th>
-                       <th className="p-4 print:p-1 border-l">تاریخ</th>
-                       <th className="p-4 print:p-1 border-l">شیفت روز (۱۹ - ۰۸)</th>
-                       <th className="p-4 print:p-1 border-l">شیفت شب (۰۸ - ۱۹)</th>
-                       <th className="p-4 print:p-1">سرپرست (On-Call)</th>
+                       <th className="p-4 print:p-0.5 border-l">روز</th>
+                       <th className="p-4 print:p-0.5 border-l">تاریخ</th>
+                       <th className="p-4 print:p-0.5 border-l">شیفت روز (۱۹ - ۰۸)</th>
+                       <th className="p-4 print:p-0.5 border-l">شیفت شب (۰۸ - ۱۹)</th>
+                       <th className="p-4 print:p-0.5">سرپرست (On-Call)</th>
                      </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-100 print:divide-black">
@@ -492,13 +492,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                        return (
                          <tr key={entry.id} className={rowClass}>
-                           <td className={`p-4 print:p-1 border-l font-bold ${isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
+                           <td className={`p-4 print:p-0.5 border-l font-bold ${isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
                               {entry.dayName}
                            </td>
-                           <td className="p-4 print:p-1 border-l font-mono text-slate-500 print:text-black" dir="ltr">
+                           <td className="p-4 print:p-0.5 border-l font-mono text-slate-500 print:text-black" dir="ltr">
                               {entry.date}
                            </td>
-                           <td className="p-2 print:p-1 border-l print:border-black">
+                           <td className="p-2 print:p-0.5 border-l print:border-black">
                               <div className="print:hidden">
                                 <ShiftUserCard 
                                     name={entry.dayShiftPerson} 
@@ -508,7 +508,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </div>
                               <span className="hidden print:block font-bold">{entry.dayShiftPerson}</span>
                            </td>
-                           <td className="p-2 print:p-1 border-l print:border-black">
+                           <td className="p-2 print:p-0.5 border-l print:border-black">
                               <div className="print:hidden">
                                 <ShiftUserCard 
                                     name={entry.nightShiftPerson} 
@@ -518,7 +518,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </div>
                               <span className="hidden print:block font-bold">{entry.nightShiftPerson}</span>
                            </td>
-                           <td className="p-2 print:p-1">
+                           <td className="p-2 print:p-0.5">
                               <div className="print:hidden">
                                 <ShiftUserCard name={entry.onCallPerson} type="Supervisor" />
                               </div>
@@ -529,22 +529,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      })}
                    </tbody>
                  </table>
-               </div>
-               
-               {/* Signatures for Print */}
-               <div className="hidden print:flex justify-between mt-6 pt-4 border-t-2 border-black px-8">
-                   <div className="text-center font-bold text-sm">
-                       <p className="mb-8">تایید سرپرست واحد</p>
-                       <p>.............................</p>
-                   </div>
-                   <div className="text-center font-bold text-sm">
-                       <p className="mb-8">تایید مدیریت کارخانه</p>
-                       <p>.............................</p>
-                   </div>
-                   <div className="text-center font-bold text-sm">
-                       <p className="mb-8">تایید منابع انسانی</p>
-                       <p>.............................</p>
-                   </div>
                </div>
             </div>
 

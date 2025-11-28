@@ -24,11 +24,11 @@
       @media print {
         @page {
           size: A4 portrait;
-          margin: 5mm; /* Minimal margins to maximize space */
+          margin: 0.5cm; /* Minimal margins */
         }
 
         html, body {
-          width: 210mm;
+          width: 100%;
           height: 100%;
           margin: 0 !important;
           padding: 0 !important;
@@ -65,14 +65,16 @@
         /* Force table to fit width and look clean */
         body:not(.print-mode-modal).print-mode-dashboard table {
              width: 100% !important;
-             font-size: 10pt !important;
+             font-size: 8pt !important; /* Smaller font to fit 31 rows */
              border-collapse: collapse !important;
+             table-layout: fixed !important;
         }
         
         body:not(.print-mode-modal).print-mode-dashboard th,
         body:not(.print-mode-modal).print-mode-dashboard td {
-             padding: 2px 4px !important; /* Compact padding */
+             padding: 1px 2px !important; /* Very Compact padding */
              border: 1px solid #000 !important;
+             height: auto !important;
         }
         
         body:not(.print-mode-modal).print-mode-dashboard .user-card-print {
