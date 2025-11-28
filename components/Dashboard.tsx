@@ -285,9 +285,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <CalendarRange size={24} />
                </div>
                <div>
-                  <h2 className="text-sm md:text-lg font-black text-slate-800 tracking-tight">برنامه شیفت {monthName} {year}</h2>
+                  <h2 className="text-sm md:text-lg font-black text-slate-800 tracking-tight">برنامه شیفت {monthName} {toPersianDigits(year)}</h2>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                     {filteredSchedule.length} رکورد نمایش داده شده
+                     {toPersianDigits(filteredSchedule.length)} رکورد نمایش داده شده
                   </p>
                </div>
             </div>
@@ -296,7 +296,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                <button onClick={onPrevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50">
                   <ChevronRight size={20} />
                </button>
-               <span className="font-bold text-slate-800 text-sm min-w-[100px] text-center">{monthName} {year}</span>
+               <span className="font-bold text-slate-800 text-sm min-w-[100px] text-center">{monthName} {toPersianDigits(year)}</span>
                <button onClick={onNextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50">
                   <ChevronLeft size={20} />
                </button>
@@ -517,8 +517,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </div>
                            </td>
                            <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-700 print:text-black font-bold">
-                              <span className="print:hidden">{entry.date}</span>
-                              <span className="hidden print:inline">{toPersianDigits(entry.date)}</span>
+                              <span>{toPersianDigits(entry.date)}</span>
                            </td>
                            <td className="p-2 print:p-0.5 border border-slate-200 print:border-black">
                               <div className="print:hidden">
@@ -576,7 +575,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
                        <div className="flex items-center gap-2">
                           <span className={`font-black ${isFriday || isHoliday ? 'text-red-600' : 'text-slate-700'}`}>{entry.dayName}</span>
-                          <span className="text-xs text-slate-400 font-mono" dir="ltr">{entry.date}</span>
+                          <span className="text-xs text-slate-400 font-bold">{toPersianDigits(entry.date)}</span>
                        </div>
                        {entry.isHoliday && <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">تعطیل</span>}
                     </div>
@@ -643,7 +642,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         align="center"
                         iconType="circle"
                         iconSize={6}
-                        formatter={(value) => <span className="text-[10px] text-slate-600 font-medium mr-1">{value}</span>}
+                        onClick={(data: any, index: number) => {
+                             // Recharts Legend 'onClick' passes payload in the first arg
+                             // We find the index in our chartData to activate it
+                             if (data && data.payload && data.payload.name) {
+                                 const idx = chartData.findIndex(d => d.name === data.payload.name);
+                                 if (idx !== -1) setActiveIndex(idx);
+                             }
+                        }}
+                        content={(props) => {
+                             // Custom renderer to ensure onClick works if default doesn't behave as expected
+                             // But default Legend with onClick prop should work in newer recharts.
+                             // Let's stick to standard prop first, if it fails we custom render.
+                             // Actually, standard Legend with onClick is supported.
+                             const { payload } = props;
+                             return (
+                                 <ul className="flex flex-wrap justify-center gap-2 mt-2">
+                                     {payload?.map((entry: any, index: number) => (
+                                         <li 
+                                            key={`item-${index}`} 
+                                            className="flex items-center gap-1 cursor-pointer hover:opacity-75 transition"
+                                            onClick={() => {
+                                                const idx = chartData.findIndex(d => d.name === entry.value);
+                                                if (idx !== -1) setActiveIndex(idx);
+                                            }}
+                                         >
+                                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                                             <span className="text-[10px] text-slate-600 font-medium">{entry.value}</span>
+                                         </li>
+                                     ))}
+                                 </ul>
+                             );
+                        }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -656,7 +686,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <StatsCard 
                     type="square"
                     title="تعداد کل شیفت"
-                    value={totalShifts}
+                    value={toPersianDigits(totalShifts)}
                     icon={Activity}
                     colorClass="bg-blue-500"
                  />
@@ -665,7 +695,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <StatsCard 
                     type="square"
                     title="مجموع ساعات"
-                    value={totalHoursSum}
+                    value={toPersianDigits(totalHoursSum)}
                     icon={Clock}
                     colorClass="bg-emerald-500"
                  />
@@ -674,7 +704,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <StatsCard 
                     type="square"
                     title="نفرات فعال"
-                    value={shiftWorkers.length}
+                    value={toPersianDigits(shiftWorkers.length)}
                     icon={Users}
                     colorClass="bg-indigo-500"
                  />

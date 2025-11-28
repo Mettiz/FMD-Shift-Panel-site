@@ -8,6 +8,8 @@ interface TodayHeroProps {
   schedule: ShiftEntry[];
 }
 
+const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
 export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
   const [currentDateStr, setCurrentDateStr] = useState<string>('');
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
@@ -52,15 +54,17 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
            <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mt-2 text-center md:text-right">
              {new Date().toLocaleDateString('fa-IR', { weekday: 'long' })}
            </h2>
-           <div className="flex items-center gap-4 text-slate-500 font-medium">
-             <div className="flex items-center gap-1">
-               <Calendar size={16} />
-               <span dir="ltr" className="font-mono text-lg">{currentDateStr}</span>
+           
+           {/* LTR Container for Left-to-Right Ordering: Logo Date -> Date -> Sep -> Logo Time -> Time */}
+           <div className="flex items-center gap-4 text-slate-500 font-medium mt-1" dir="ltr">
+             <div className="flex items-center gap-2">
+               <Calendar size={18} className="text-emerald-500" />
+               <span className="text-lg font-bold">{toPersianDigits(currentDateStr)}</span>
              </div>
-             <div className="w-px h-4 bg-slate-300"></div>
-             <div className="flex items-center gap-1">
-               <Clock size={16} />
-               <span className="font-mono text-lg">{currentTimeStr}</span>
+             <div className="w-px h-5 bg-slate-300 mx-1"></div>
+             <div className="flex items-center gap-2">
+               <Clock size={18} className="text-blue-500" />
+               <span className="text-lg font-bold">{toPersianDigits(currentTimeStr)}</span>
              </div>
            </div>
         </div>
@@ -93,7 +97,7 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
            ) : (
              <div className="flex flex-col items-center justify-center text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 h-full">
                <Calendar size={40} className="text-slate-300 mb-2" />
-               <p className="text-slate-500 font-medium">برای تاریخ امروز ({currentDateStr}) برنامه‌ای ثبت نشده است.</p>
+               <p className="text-slate-500 font-medium">برای تاریخ امروز ({toPersianDigits(currentDateStr)}) برنامه‌ای ثبت نشده است.</p>
                <p className="text-xs text-slate-400 mt-1">ممکن است تقویم به سال ۱۴۰۴ تنظیم شده باشد.</p>
              </div>
            )}
