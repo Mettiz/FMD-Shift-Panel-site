@@ -516,8 +516,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                   {/* Holiday Text Removed for Print */}
                               </div>
                            </td>
-                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-500 print:text-black">
-                              <span className="print:hidden md:font-mono">{entry.date}</span>
+                           <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-700 print:text-black font-bold">
+                              <span className="print:hidden">{entry.date}</span>
                               <span className="hidden print:inline">{toPersianDigits(entry.date)}</span>
                            </td>
                            <td className="p-2 print:p-0.5 border border-slate-200 print:border-black">
