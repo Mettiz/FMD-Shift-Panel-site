@@ -55,7 +55,7 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
              {new Date().toLocaleDateString('fa-IR', { weekday: 'long' })}
            </h2>
            
-           {/* LTR Container for Left-to-Right Ordering: Logo Date -> Date -> Sep -> Logo Time -> Time */}
+           {/* LTR Container: Icon Date | Icon Time */}
            <div className="flex items-center gap-4 text-slate-500 font-medium mt-1" dir="ltr">
              <div className="flex items-center gap-2">
                <Calendar size={18} className="text-emerald-500" />
@@ -79,19 +79,19 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
                {/* Supervisor */}
                <div className="flex flex-col gap-1 items-stretch">
                  <span className="text-xs font-bold text-slate-400 pr-1 text-right">سرپرست</span>
-                 <ShiftUserCard name={todayEntry.onCallPerson} type="Supervisor" />
+                 <ShiftUserCard name={todayEntry.onCallPerson} type="Supervisor" showIcon={true} />
                </div>
                
                {/* Day Shift */}
                <div className="flex flex-col gap-1 items-stretch">
                  <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت روز (۱۹ - ۰۸)</span>
-                 <ShiftUserCard name={todayEntry.dayShiftPerson} type="Day" />
+                 <ShiftUserCard name={todayEntry.dayShiftPerson} type="Day" showIcon={true} />
                </div>
 
                {/* Night Shift */}
                <div className="flex flex-col gap-1 items-stretch">
                  <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت شب (۰۸ - ۱۹)</span>
-                 <ShiftUserCard name={todayEntry.nightShiftPerson} type="Night" />
+                 <ShiftUserCard name={todayEntry.nightShiftPerson} type="Night" showIcon={true} />
                </div>
              </div>
            ) : (

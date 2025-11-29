@@ -61,11 +61,15 @@ const DashboardDateSelect = ({ value, onChange, options, width = "w-[60px]" }: {
         className="w-full h-full appearance-none bg-white border border-slate-300 hover:border-emerald-500 rounded-lg px-1 text-sm font-bold text-slate-700 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all cursor-pointer text-center dir-ltr"
         style={{ textAlign: 'center', textAlignLast: 'center' }}
       >
-        {options.map((o) => (
-          <option key={o.value || o} value={o.value || o}>
-            {o.label || o}
-          </option>
-        ))}
+        {options.map((o) => {
+          const val = typeof o === 'object' ? o.value : o;
+          const label = typeof o === 'object' ? o.label : o;
+          return (
+            <option key={val} value={val}>
+              {toPersianDigits(label)}
+            </option>
+          );
+        })}
       </select>
   </div>
 );
@@ -154,9 +158,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
          
          setFromDate(defFrom);
          setToDate(defTo);
-         // Don't auto-apply appliedFilter here to allow month view by default
      }
-  }, [scheduleData.length]); // Only run if data length changes drastically (like month change)
+  }, [scheduleData.length]); 
 
   const handleApplyFilter = () => {
       setAppliedFilter({ from: fromDate, to: toDate });
@@ -191,7 +194,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [scheduleData, fullSchedule, viewMode, appliedFilter, filterPerson]);
 
   const stats = useMemo(() => {
-    // We calculate stats based on the VIEWABLE data to reflect what's shown
     const dataToAnalyze = filteredSchedule;
     
     const result: StatEntry[] = shiftWorkers.map(worker => {
@@ -202,25 +204,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
       dataToAnalyze.forEach(entry => {
         if (entry.dayShiftPerson === worker) {
           dayShifts++;
-          workedHours += 11; // 11 hours for day
+          workedHours += 11; 
         }
         if (entry.nightShiftPerson === worker) {
           nightShifts++;
-          workedHours += 13; // 13 hours for night
+          workedHours += 13; 
         }
       });
 
-      // Calculate weighted score (Day=11, Night=13*1.5)
       const weightedScore = (dayShifts * 11) + (nightShifts * 13 * 1.5);
-      // Total actual hours
       const totalHours = (dayShifts * 11) + (nightShifts * 13);
 
       return {
         name: worker,
         dayShifts,
         nightShifts,
-        totalHours, // Actual hours
-        weightedScore, // Pressure score
+        totalHours,
+        weightedScore,
         offHours: 0, 
         workedHours
       };
@@ -230,10 +230,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [filteredSchedule, shiftWorkers]);
 
   // Derived Stats for Cards
-  const totalShifts = filteredSchedule.length * 2; // Day + Night
+  const totalShifts = filteredSchedule.length * 2; 
   const totalHoursSum = stats.reduce((acc, curr) => acc + curr.totalHours, 0);
   
-  // Top Performer Logic (Handling Ties) - BASED ON HOURS
+  // Top Performer Logic
   const topPerformer = useMemo(() => {
       if (stats.length === 0) return null;
       const maxHours = Math.max(...stats.map(s => s.totalHours));
@@ -272,7 +272,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="dashboard-container space-y-6">
       
-      {/* Today Hero (Live Status) - Moved to Top */}
+      {/* Today Hero (Live Status) */}
       <TodayHero schedule={fullSchedule} />
 
       {/* Header & Controls */}
@@ -441,23 +441,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Left: Schedule Table (3 cols wide) */}
+        {/* Left: Schedule Table */}
         <div className="lg:col-span-3 space-y-6">
             
-            {/* Print Header (Visible only in Print) */}
+            {/* Print Header */}
             <div className="hidden print:grid grid-cols-3 items-center mb-2 border border-black rounded-lg p-3">
-                {/* Right (In RTL this is first) */}
                 <div className="flex flex-col items-start gap-1 justify-self-start">
                     <h1 className="text-lg font-black text-black">برنامه شیفت</h1>
                     <span className="text-sm font-bold text-black">واحد تولید FMD</span>
                 </div>
 
-                {/* Center */}
                 <div className="flex items-center justify-center justify-self-center">
                     <h2 className="text-2xl font-black text-black">{monthName} {toPersianDigits(year)}</h2>
                 </div>
 
-                {/* Left (In RTL this is last) */}
                 <div className="flex flex-col items-end gap-1 text-right justify-self-end">
                      <div className="flex items-center gap-1 text-xs font-bold bg-gray-50 rounded px-2 py-0.5">
                         <span>بازه زمانی:</span>
@@ -476,13 +473,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden md:block print:block print:shadow-none print:border-0 print:rounded-none print:overflow-visible">
                <div className="overflow-x-auto print:overflow-visible">
                  <table className="w-full text-sm text-center border-collapse print:table-fixed print:text-[9pt]">
-                   {/* Define columns for print to ensure they fit */}
                    <colgroup className="hidden print:table-column-group">
-                       <col style={{width: '8%'}} /> {/* Day Name - Increased */}
-                       <col style={{width: '12%'}} /> {/* Date - Increased */}
-                       <col style={{width: '26.6%'}} /> {/* Day Shift */}
-                       <col style={{width: '26.6%'}} /> {/* Night Shift */}
-                       <col style={{width: '26.6%'}} /> {/* Supervisor */}
+                       <col style={{width: '8%'}} />
+                       <col style={{width: '12%'}} />
+                       <col style={{width: '26.6%'}} />
+                       <col style={{width: '26.6%'}} />
+                       <col style={{width: '26.6%'}} />
                    </colgroup>
                    
                    <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 print:bg-gray-100 print:text-black print:border-black">
@@ -500,10 +496,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        const isHoliday = entry.isHoliday;
                        const isThursday = entry.dayName === 'پنج‌شنبه';
                        
-                       // Styling Logic
-                       let rowClass = 'hover:bg-slate-50 transition-colors'; // Default
+                       let rowClass = 'hover:bg-slate-50 transition-colors'; 
                        if (isFriday || isHoliday) {
-                           rowClass = 'bg-red-50 hover:bg-red-100 text-red-900 print:bg-gray-200 print:text-black'; // Print uses gray to distinguish
+                           rowClass = 'bg-red-50 hover:bg-red-100 text-red-900 print:bg-gray-200 print:text-black';
                        } else if (isThursday) {
                            rowClass = 'bg-[#f3e8ff] hover:bg-purple-100 text-purple-900 print:bg-white print:text-black';
                        }
@@ -513,7 +508,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            <td className={`p-4 print:p-0.5 border border-slate-200 print:border-black font-bold ${isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
                               <div className="flex flex-col items-center justify-center">
                                   <span>{entry.dayName}</span>
-                                  {/* Holiday Text Removed for Print */}
                               </div>
                            </td>
                            <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-700 print:text-black font-bold">
@@ -553,7 +547,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
             </div>
 
-            {/* Mobile Cards (No Print) */}
+            {/* Mobile Cards */}
             <div className="md:hidden space-y-4 print:hidden">
               {filteredSchedule.map(entry => {
                  const isFriday = entry.dayName === 'جمعه';
@@ -602,7 +596,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
         </div>
 
-        {/* Right: Stats & Charts (1 col) - Now at bottom or side */}
+        {/* Right: Stats & Charts */}
         <div className="space-y-6 print:hidden">
            
            {/* Chart Section */}
@@ -633,6 +627,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               key={`cell-${index}`} 
                               fill={CHART_COLORS[index % CHART_COLORS.length]} 
                               strokeWidth={0}
+                              style={{ outline: 'none' }}
                           />
                         ))}
                       </Pie>
@@ -643,34 +638,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         iconType="circle"
                         iconSize={6}
                         onClick={(data: any, index: number) => {
-                             // Recharts Legend 'onClick' passes payload in the first arg
-                             // We find the index in our chartData to activate it
                              if (data && data.payload && data.payload.name) {
                                  const idx = chartData.findIndex(d => d.name === data.payload.name);
                                  if (idx !== -1) setActiveIndex(idx);
                              }
                         }}
                         content={(props) => {
-                             // Custom renderer to ensure onClick works if default doesn't behave as expected
-                             // But default Legend with onClick prop should work in newer recharts.
-                             // Let's stick to standard prop first, if it fails we custom render.
-                             // Actually, standard Legend with onClick is supported.
                              const { payload } = props;
                              return (
                                  <ul className="flex flex-wrap justify-center gap-2 mt-2">
-                                     {payload?.map((entry: any, index: number) => (
-                                         <li 
-                                            key={`item-${index}`} 
-                                            className="flex items-center gap-1 cursor-pointer hover:opacity-75 transition"
-                                            onClick={() => {
-                                                const idx = chartData.findIndex(d => d.name === entry.value);
-                                                if (idx !== -1) setActiveIndex(idx);
-                                            }}
-                                         >
-                                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                                             <span className="text-[10px] text-slate-600 font-medium">{entry.value}</span>
-                                         </li>
-                                     ))}
+                                     {payload?.map((entry: any, index: number) => {
+                                         const isActive = entry.value === chartData[activeIndex]?.name;
+                                         return (
+                                            <li 
+                                                key={`item-${index}`} 
+                                                className={`flex items-center gap-1 cursor-pointer transition ${isActive ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
+                                                onClick={() => {
+                                                    const idx = chartData.findIndex(d => d.name === entry.value);
+                                                    if (idx !== -1) setActiveIndex(idx);
+                                                }}
+                                            >
+                                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                                                <span className={`text-[10px] text-slate-600 font-medium ${isActive ? 'font-bold text-slate-900' : ''}`}>{entry.value}</span>
+                                            </li>
+                                         );
+                                     })}
                                  </ul>
                              );
                         }}

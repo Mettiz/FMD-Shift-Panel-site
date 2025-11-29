@@ -1,14 +1,16 @@
 
 import React from 'react';
+import { Sun, Moon, CheckCircle2 } from 'lucide-react';
 
 interface ShiftUserCardProps {
   name: string;
   type: 'Day' | 'Night' | 'Supervisor';
   className?: string;
   originalName?: string; // New prop to show previous owner
+  showIcon?: boolean; // New prop to show icon instead of initial
 }
 
-export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, className = '', originalName }) => {
+export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, className = '', originalName, showIcon = false }) => {
   const isDay = type === 'Day';
   const isNight = type === 'Night';
   const isSupervisor = type === 'Supervisor';
@@ -50,6 +52,9 @@ export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, classN
       indicator: 'bg-emerald-500'
     };
   }
+  
+  // Icon Selection
+  const Icon = isDay ? Sun : (isNight ? Moon : CheckCircle2);
 
   return (
     <div className={`
@@ -60,12 +65,12 @@ export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, classN
       {/* Colored Indicator Strip (Right side) */}
       <div className={`absolute right-0 top-2 bottom-2 w-1 rounded-l-full ${styles.indicator} opacity-50`}></div>
 
-      {/* Avatar */}
+      {/* Avatar or Icon */}
       <div className={`
         w-9 h-9 min-w-[36px] rounded-full flex items-center justify-center 
         text-sm font-bold ml-1 ${styles.avatar}
       `}>
-        {firstLetter}
+        {showIcon ? <Icon size={18} /> : firstLetter}
       </div>
 
       {/* Details */}
