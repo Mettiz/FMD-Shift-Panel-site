@@ -325,14 +325,14 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0 print:bg-white print:static print:block">
       <div className="absolute inset-0 print:hidden" onClick={onClose}></div>
       
       {/* 
         Changes for Print Fix: 
         print:relative print:w-full print:h-auto print:shadow-none print:border-none
       */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:overflow-visible print:relative print:w-full print:max-w-none print:h-auto print:shadow-none print:border-none print:bg-white print:z-50 print:static">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:overflow-visible print:shadow-none print:border-none print:w-full print:max-w-none print:h-auto print:bg-white print:static">
         
         {/* Header (Screen Only) */}
         <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
@@ -387,31 +387,31 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
         </div>
 
         {/* Print Header - Redesigned with Border */}
-        <div className="hidden print:flex w-full justify-between items-center mb-4 print:mb-4 p-2 border-2 border-black rounded-xl relative">
+        <div className="hidden print:flex w-full justify-between items-center mb-8 p-4 border-2 border-black rounded-xl relative">
              
              {/* Right: Name (In Box) */}
              <div className="flex flex-col items-start w-1/3 gap-1">
-                 <span className="text-xs font-bold text-black">نام پرسنل:</span>
-                 <div className="bg-white border border-black rounded-lg px-3 py-1 text-sm font-bold text-black">
+                 <span className="text-sm font-bold text-black">نام پرسنل:</span>
+                 <div className="bg-white border border-black rounded-lg px-4 py-2 text-xl font-bold text-black">
                      {selectedUser}
                  </div>
              </div>
 
              {/* Center: Title & Month */}
              <div className="flex flex-col items-center w-1/3 text-center">
-                 <h1 className="text-xl font-black text-black whitespace-nowrap">گزارش کارکرد تفصیلی</h1>
-                 <div className="text-lg font-bold text-black mt-1">
+                 <h1 className="text-3xl font-black text-black whitespace-nowrap">گزارش کارکرد تفصیلی</h1>
+                 <div className="text-2xl font-bold text-black mt-2">
                      {toPersianDigits(monthName)}
                  </div>
              </div>
 
              {/* Left: Date Range & Report Date */}
              <div className="flex flex-col items-end w-1/3">
-                 <div className="text-xs font-bold text-black dir-ltr">
+                 <div className="text-lg font-bold text-black dir-ltr">
                      <span className="ml-1">بازه:</span>
                      {headerDateRange}
                  </div>
-                 <div className="text-[10px] font-bold text-black mt-1">
+                 <div className="text-sm font-bold text-black mt-2">
                      تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
                  </div>
              </div>
@@ -477,16 +477,16 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           </h4>
           
           <div className="overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
-            <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[10pt]">
+            <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[11pt]">
                 <thead>
                 <tr className="bg-slate-100 border-b border-slate-200 print:bg-gray-200 print:border-black">
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-24">تاریخ</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16">روز</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center">وضعیت / شرح</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
-                    <th className="p-2 print:p-1.5 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-24">تاریخ</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16">روز</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center">وضعیت / شرح</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
+                    <th className="p-2 print:p-2 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
@@ -496,9 +496,9 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     
                     return (
                         <tr key={row.id} className={`${rowClass} break-inside-avoid`}>
-                            <td className="p-2 print:p-1.5 text-slate-900 font-bold border-l print:border-none text-center" dir="ltr">{toPersianDigits(row.date)}</td>
-                            <td className={`p-2 print:p-1.5 font-bold border-l print:border-none text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
-                            <td className="p-2 print:p-1.5 border-l print:border-none">
+                            <td className="p-2 print:p-2 text-slate-900 font-bold border-l print:border-none text-center" dir="ltr">{toPersianDigits(row.date)}</td>
+                            <td className={`p-2 print:p-2 font-bold border-l print:border-none text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
+                            <td className="p-2 print:p-2 border-l print:border-none">
                                 <div className="flex items-center gap-2">
                                     <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
                                     <span className="text-slate-900 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
@@ -506,21 +506,21 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                             </td>
                             
                             {/* Values */}
-                            <td className="p-2 print:p-1.5 text-center border-l print:border-none font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.mowazafi || '-')}</td>
-                            <td className="p-2 print:p-1.5 text-center border-l print:border-none font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.nightFloat || '-')}</td>
-                            <td className="p-2 print:p-1.5 text-center border-l print:border-none font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.normalOT || '-')}</td>
-                            <td className="p-2 print:p-1.5 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.holidayOT || '-')}</td>
+                            <td className="p-2 print:p-2 text-center border-l print:border-none font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.mowazafi || '-')}</td>
+                            <td className="p-2 print:p-2 text-center border-l print:border-none font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.nightFloat || '-')}</td>
+                            <td className="p-2 print:p-2 text-center border-l print:border-none font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.normalOT || '-')}</td>
+                            <td className="p-2 print:p-2 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.holidayOT || '-')}</td>
                         </tr>
                     );
                 })}
                 </tbody>
                 <tfoot>
                      <tr className="bg-slate-800 text-white print:bg-gray-200 print:text-black font-black border-t-2 border-slate-900 print:border-black">
-                         <td colSpan={3} className="p-2 print:p-1.5 text-center border-l print:border-none">مجموع کل</td>
-                         <td className="p-2 print:p-1.5 text-center border-l print:border-none">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
-                         <td className="p-2 print:p-1.5 text-center border-l print:border-none">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
-                         <td className="p-2 print:p-1.5 text-center border-l print:border-none">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
-                         <td className="p-2 print:p-1.5 text-center">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
+                         <td colSpan={3} className="p-2 print:p-2 text-center border-l print:border-none text-lg">مجموع کل</td>
+                         <td className="p-2 print:p-2 text-center border-l print:border-none text-lg">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
+                         <td className="p-2 print:p-2 text-center border-l print:border-none text-lg">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
+                         <td className="p-2 print:p-2 text-center border-l print:border-none text-lg">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                         <td className="p-2 print:p-2 text-center text-lg">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
                      </tr>
                 </tfoot>
             </table>
