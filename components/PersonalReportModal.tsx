@@ -392,7 +392,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
              {/* Right: Name (In Box) */}
              <div className="flex flex-col items-start w-1/3 gap-1">
                  <span className="text-xs font-bold text-black">نام پرسنل:</span>
-                 <div className="bg-gray-100 border border-black rounded-lg px-4 py-2 text-lg font-bold text-black">
+                 <div className="bg-white border border-black rounded-lg px-4 py-2 text-base font-bold text-black">
                      {selectedUser}
                  </div>
              </div>
@@ -490,24 +490,29 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
-                {detailedStats.history.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50 print:hover:bg-transparent break-inside-avoid">
-                        <td className="p-2 print:p-0.5 text-slate-900 font-bold border-l print:border-none text-center" dir="ltr">{toPersianDigits(row.date)}</td>
-                        <td className={`p-2 print:p-0.5 font-bold border-l print:border-none text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
-                        <td className="p-2 print:p-0.5 border-l print:border-none">
-                             <div className="flex items-center gap-2">
-                                 <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
-                                 <span className="text-slate-900 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
-                             </div>
-                        </td>
-                        
-                        {/* Values */}
-                        <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.mowazafi || '-')}</td>
-                        <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.nightFloat || '-')}</td>
-                        <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.normalOT || '-')}</td>
-                        <td className="p-2 print:p-0.5 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.holidayOT || '-')}</td>
-                    </tr>
-                ))}
+                {detailedStats.history.map((row) => {
+                    const isHoliday = row.isHoliday || row.dayName === 'جمعه';
+                    const rowClass = isHoliday ? 'bg-red-50 print:bg-gray-100' : 'hover:bg-slate-50 print:hover:bg-transparent';
+                    
+                    return (
+                        <tr key={row.id} className={`${rowClass} break-inside-avoid`}>
+                            <td className="p-2 print:p-0.5 text-slate-900 font-bold border-l print:border-none text-center" dir="ltr">{toPersianDigits(row.date)}</td>
+                            <td className={`p-2 print:p-0.5 font-bold border-l print:border-none text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
+                            <td className="p-2 print:p-0.5 border-l print:border-none">
+                                <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
+                                    <span className="text-slate-900 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
+                                </div>
+                            </td>
+                            
+                            {/* Values */}
+                            <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.mowazafi || '-')}</td>
+                            <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.nightFloat || '-')}</td>
+                            <td className="p-2 print:p-0.5 text-center border-l print:border-none font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.normalOT || '-')}</td>
+                            <td className="p-2 print:p-0.5 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.holidayOT || '-')}</td>
+                        </tr>
+                    );
+                })}
                 </tbody>
                 <tfoot>
                      <tr className="bg-slate-800 text-white print:bg-gray-200 print:text-black font-black border-t-2 border-slate-900 print:border-black">
