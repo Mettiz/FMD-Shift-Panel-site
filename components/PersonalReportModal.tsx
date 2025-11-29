@@ -114,6 +114,14 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
     }
   }, [filterType, customStart, customEnd, schedule, fullSchedule]);
 
+  // Compute date range for header
+  const headerDateRange = useMemo(() => {
+      if (targetSchedule.length === 0) return '-';
+      const s = targetSchedule[0].date;
+      const e = targetSchedule[targetSchedule.length - 1].date;
+      return `${toPersianDigits(s)} - ${toPersianDigits(e)}`;
+  }, [targetSchedule]);
+
   // --- WORK HOUR CALCULATION ENGINE ---
   const detailedStats = useMemo(() => {
     // 1. Calculate Target Deduction based on Holidays
@@ -320,7 +328,12 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0">
       <div className="absolute inset-0 print:hidden" onClick={onClose}></div>
       
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:fixed print:inset-0 print:h-full print:w-full print:max-h-none print:max-w-none print:shadow-none print:z-[9999] print:bg-white">
+      {/* 
+        Changes for Print Fix: 
+        print:fixed -> print:static or print:relative to avoid 100vh constraint 
+        print:overflow-visible to allow content to flow naturally
+      */}
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:static print:h-auto print:w-full print:max-h-none print:max-w-none print:shadow-none print:overflow-visible print:bg-white">
         
         {/* Header (Screen Only) */}
         <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
@@ -374,21 +387,29 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
             </div>
         </div>
 
-        {/* Print Header - Redesigned & Bordered */}
-        <div className="hidden print:flex flex-col w-full border-2 border-black rounded-lg p-3 mb-2 relative">
-             <div className="flex justify-between items-start w-full">
-                 <div className="flex flex-col items-start gap-2">
-                      <h1 className="text-xl font-black text-black">گزارش کارکرد تفصیلی</h1>
-                      
-                      <div className="bg-gray-200 border border-black px-4 py-1 rounded text-sm font-bold text-black">
-                         نام پرسنل: {selectedUser}
-                      </div>
-                      
-                      <div className="text-xs font-bold text-black mt-1">
-                         {filterType === 'VIEW' ? `بازه زمانی: ${toPersianDigits(monthName)}` : `بازه زمانی: ${toPersianDigits(customStart)} تا ${toPersianDigits(customEnd)}`}
-                      </div>
+        {/* Print Header - Redesigned & Clean (No Borders) */}
+        <div className="hidden print:flex w-full justify-between items-start mb-6 relative px-2 pt-2">
+             {/* Right: Name */}
+             <div className="flex flex-col items-start w-1/3">
+                 <div className="text-sm font-bold text-black">
+                    نام پرسنل: {selectedUser}
                  </div>
+             </div>
 
+             {/* Center: Title & Month */}
+             <div className="flex flex-col items-center w-1/3 text-center">
+                 <h1 className="text-xl font-black text-black whitespace-nowrap">گزارش کارکرد تفصیلی</h1>
+                 <div className="text-lg font-bold text-black mt-1">
+                     {toPersianDigits(monthName)}
+                 </div>
+             </div>
+
+             {/* Left: Date Range & Report Date */}
+             <div className="flex flex-col items-end w-1/3">
+                 <div className="text-xs font-bold text-black dir-ltr">
+                     <span className="ml-1">بازه:</span>
+                     {headerDateRange}
+                 </div>
                  <div className="text-[10px] font-bold text-black mt-1">
                      تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
                  </div>
