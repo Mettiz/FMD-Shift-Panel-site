@@ -374,20 +374,24 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
             </div>
         </div>
 
-        {/* Print Header - Centered & Clean */}
-        <div className="hidden print:flex flex-col items-center justify-center border-b-2 border-black pb-4 mb-4 pt-2 w-full relative">
-             <div className="absolute top-0 right-0 text-xs font-bold text-black">
-                 نام پرسنل: {selectedUser}
-             </div>
-             <div className="absolute top-0 left-0 text-xs font-bold text-black">
-                 تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
-             </div>
+        {/* Print Header - Redesigned & Bordered */}
+        <div className="hidden print:flex flex-col w-full border-2 border-black rounded-lg p-3 mb-2 relative">
+             <div className="flex justify-between items-start w-full">
+                 <div className="flex flex-col items-start gap-2">
+                      <h1 className="text-xl font-black text-black">گزارش کارکرد تفصیلی</h1>
+                      
+                      <div className="bg-gray-200 border border-black px-4 py-1 rounded text-sm font-bold text-black">
+                         نام پرسنل: {selectedUser}
+                      </div>
+                      
+                      <div className="text-xs font-bold text-black mt-1">
+                         {filterType === 'VIEW' ? `بازه زمانی: ${toPersianDigits(monthName)}` : `بازه زمانی: ${toPersianDigits(customStart)} تا ${toPersianDigits(customEnd)}`}
+                      </div>
+                 </div>
 
-             <h1 className="text-2xl font-black text-black mb-1">گزارش کارکرد تفصیلی</h1>
-             <h2 className="text-xl font-bold text-black mb-2">{toPersianDigits(monthName)}</h2>
-             
-             <div className="text-sm font-bold border border-black px-4 py-1 rounded-full">
-                {filterType === 'VIEW' ? `بازه: ${toPersianDigits(monthName)}` : `بازه: ${toPersianDigits(customStart)} تا ${toPersianDigits(customEnd)}`}
+                 <div className="text-[10px] font-bold text-black mt-1">
+                     تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
+                 </div>
              </div>
         </div>
 
@@ -451,16 +455,16 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           </h4>
           
           <div className="overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
-            <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[9px]">
+            <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[8pt]">
                 <thead>
                 <tr className="bg-slate-100 border-b border-slate-200 print:bg-gray-200 print:border-black">
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-24">تاریخ</th>
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16">روز</th>
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center">وضعیت / شرح</th>
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
-                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
-                    <th className="p-2 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-24">تاریخ</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16">روز</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center">وضعیت / شرح</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
+                    <th className="p-2 print:p-0.5 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
@@ -485,23 +489,16 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 </tbody>
                 <tfoot>
                      <tr className="bg-slate-800 text-white print:bg-gray-200 print:text-black font-black border-t-2 border-slate-900 print:border-black">
-                         <td colSpan={3} className="p-2 print:p-1 text-center border-l print:border-black">مجموع کل</td>
-                         <td className="p-2 print:p-1 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
-                         <td className="p-2 print:p-1 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
-                         <td className="p-2 print:p-1 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
-                         <td className="p-2 print:p-1 text-center">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
+                         <td colSpan={3} className="p-2 print:p-0.5 text-center border-l print:border-black">مجموع کل</td>
+                         <td className="p-2 print:p-0.5 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
+                         <td className="p-2 print:p-0.5 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
+                         <td className="p-2 print:p-0.5 text-center border-l print:border-black">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                         <td className="p-2 print:p-0.5 text-center">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
                      </tr>
                 </tfoot>
             </table>
           </div>
           
-          <div className="hidden print:block mt-6 pt-4 border-t-2 border-black break-inside-avoid px-8">
-              <div className="flex justify-between text-center text-xs font-bold">
-                  <div>امضاء سرپرست قسمت</div>
-                  <div>امضاء امور اداری</div>
-                  <div>امضاء پرسنل</div>
-              </div>
-          </div>
         </div>
       </div>
     </div>
