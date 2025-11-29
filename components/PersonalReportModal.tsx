@@ -385,7 +385,41 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     </div>
                 </div>
 
-                {/* NOTE: Detailed breakdown table removed from screen view per request */}
+                {/* --- Screen View Table --- */}
+                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-700">
+                        ریز کارکرد روزانه (نمایش در صفحه)
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs text-center">
+                            <thead className="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th className="p-2 border-l border-slate-200">تاریخ</th>
+                                    <th className="p-2 border-l border-slate-200">روز</th>
+                                    <th className="p-2 text-right border-l border-slate-200">شرح</th>
+                                    <th className="p-2 border-l border-slate-200">موظفی</th>
+                                    <th className="p-2 border-l border-slate-200">شب/شناور</th>
+                                    <th className="p-2 border-l border-slate-200">عادی</th>
+                                    <th className="p-2">تعطیل</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {detailedStats.history.map(row => (
+                                    <tr key={row.id} className="hover:bg-slate-50">
+                                        <td className="p-2 border-l border-slate-100 dir-ltr">{toPersianDigits(row.date)}</td>
+                                        <td className={`p-2 border-l border-slate-100 ${row.dayName === 'جمعه' || row.isHoliday ? 'text-red-500 font-bold' : ''}`}>{row.dayName}</td>
+                                        <td className="p-2 text-right border-l border-slate-100 truncate max-w-[200px]">{row.desc}</td>
+                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.mowazafi || '-')}</td>
+                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.nightFloat || '-')}</td>
+                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.normalOT || '-')}</td>
+                                        <td className="p-2 font-medium">{toPersianDigits(row.holidayOT || '-')}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
