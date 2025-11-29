@@ -125,13 +125,11 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
   // --- WORK HOUR CALCULATION ENGINE ---
   const detailedStats = useMemo(() => {
     // 1. Calculate Target Deduction based on Holidays
-    // Logic: 198 is base. Deduct 9h for each Official Holiday that falls on Sat-Wed.
     const MOWAZAFI_BASE_TARGET = 198;
     
     const holidayDeductionHours = targetSchedule.reduce((total, entry) => {
         const isFriday = entry.dayName === 'جمعه';
         const isThursday = entry.dayName === 'پنج‌شنبه';
-        // Check if it's a Normal Work Day (Sat-Wed) AND is marked as Holiday
         if (!isFriday && !isThursday && entry.isHoliday) {
             return total + 9;
         }
@@ -140,50 +138,40 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
     const ADJUSTED_TARGET = Math.max(0, MOWAZAFI_BASE_TARGET - holidayDeductionHours);
 
-    // 2. Raw Accumulators
-    let rawMowazafi = 0;       // Hours from 08-17 on Normal Days
-    let rawNightFloat = 0;     // Hours from Night Shifts on Normal Days (can fill deficit)
-    let rawNormalOT = 0;       // Hours from 17-19 Normal Days + Thursdays
-    let rawHolidayOT = 0;      // Hours from Fridays + Holidays
+    let rawMowazafi = 0;       
+    let rawNightFloat = 0;     
+    let rawNormalOT = 0;       
+    let rawHolidayOT = 0;      
 
     const history = targetSchedule.map(entry => {
-      // Logic for current day (00:00 to 24:00)
-      
       const isFriday = entry.dayName === 'جمعه';
       const isThursday = entry.dayName === 'پنج‌شنبه';
       const isOfficialHoliday = entry.isHoliday;
       
-      // "Holiday Day" for Overtime purposes (Fridays & Official Holidays)
       const isHolidayOTDay = isFriday || isOfficialHoliday;
-      // "Normal Day" for Mowazafi purposes (Sat-Wed, NOT Holiday)
       const isNormalWorkDay = !isHolidayOTDay && !isThursday;
 
-      // User Status
-      const isDayShift = entry.dayShiftPerson === selectedUser; // 08-19
-      const isNightShift = entry.nightShiftPerson === selectedUser; // 19-24 (+00-08 next day)
+      const isDayShift = entry.dayShiftPerson === selectedUser; 
+      const isNightShift = entry.nightShiftPerson === selectedUser; 
       
-      // Lookback for "00-08" status
       const fullIndex = fullSchedule.findIndex(s => s.id === entry.id);
       let prevEntry: ShiftEntry | undefined;
       if (fullIndex !== -1 && fullIndex > 0) {
           prevEntry = fullSchedule[fullIndex - 1];
       } else {
-          // Fallback if at start of array (approximate)
           const dateIdx = fullSchedule.findIndex(s => s.date === entry.date);
           if (dateIdx !== -1 && dateIdx > 0) prevEntry = fullSchedule[dateIdx - 1];
       }
-      const wasNightYesterday = prevEntry?.nightShiftPerson === selectedUser; // Worked 19-24 yesterday -> Works 00-08 today
+      const wasNightYesterday = prevEntry?.nightShiftPerson === selectedUser; 
 
-      // --- Per Day Accumulators ---
       let dayMowazafi = 0;
       let dayNightFloat = 0;
       let dayNormalOT = 0;
       let dayHolidayOT = 0;
       let descriptions: string[] = [];
 
-      // BLOCK A: 00:00 - 08:00 (8 Hours)
+      // BLOCK A: 00:00 - 08:00
       if (wasNightYesterday) {
-          // User worked 00-08
           if (isHolidayOTDay) {
               dayHolidayOT += 8;
               descriptions.push('شب‌کاری (بامداد تعطیل)');
@@ -191,13 +179,12 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
               dayNormalOT += 8;
               descriptions.push('شب‌کاری (بامداد ۵شنبه)');
           } else {
-              // Normal Day Night Part
               dayNightFloat += 8;
               descriptions.push('شب‌کاری (بامداد)');
           }
       }
 
-      // BLOCK B: 08:00 - 17:00 (9 Hours)
+      // BLOCK B: 08:00 - 17:00
       if (isDayShift) {
           if (isHolidayOTDay) {
               dayHolidayOT += 9;
@@ -210,29 +197,25 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
               descriptions.push('شیفت روز (عادی)');
           }
       } else if (!isDayShift && !isNightShift && !wasNightYesterday) {
-          // Not on shift, not resting from last night
           if (isNormalWorkDay) {
-              // Standard Work Day (Office Hours)
               dayMowazafi += 9;
               descriptions.push('کار روزانه (غیرشیفت)');
           }
-          // If Thursday/Holiday and not on shift -> OFF (0 hours)
       }
 
-      // BLOCK C: 17:00 - 19:00 (2 Hours)
+      // BLOCK C: 17:00 - 19:00
       if (isDayShift) {
           if (isHolidayOTDay) {
               dayHolidayOT += 2;
           } else if (isThursday) {
               dayNormalOT += 2;
           } else {
-              // Normal Day 17-19 is Always Normal OT
               dayNormalOT += 2; 
               if (!descriptions.includes('اضافه کار عصر')) descriptions.push('اضافه کار عصر');
           }
       }
 
-      // BLOCK D: 19:00 - 24:00 (5 Hours)
+      // BLOCK D: 19:00 - 24:00
       if (isNightShift) {
           if (isHolidayOTDay) {
               dayHolidayOT += 5;
@@ -241,23 +224,15 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
               dayNormalOT += 5;
               descriptions.push('شیفت شب (شروع ۵شنبه)');
           } else {
-              // Normal Day Night Start
               dayNightFloat += 5;
               descriptions.push('شیفت شب (شروع)');
           }
       }
 
-      // --- Summary for Row ---
       rawMowazafi += dayMowazafi;
       rawNightFloat += dayNightFloat;
       rawNormalOT += dayNormalOT;
       rawHolidayOT += dayHolidayOT;
-
-      let badgeColor = 'bg-white border-slate-200 text-slate-400';
-      if (dayHolidayOT > 0) badgeColor = 'bg-red-50 text-red-700 border-red-200';
-      else if (dayNormalOT > 0) badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
-      else if (dayNightFloat > 0) badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      else if (dayMowazafi > 0) badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
 
       return {
           ...entry,
@@ -265,12 +240,10 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           nightFloat: dayNightFloat,
           normalOT: dayNormalOT,
           holidayOT: dayHolidayOT,
-          desc: descriptions.length > 0 ? descriptions.join(' + ') : (isHolidayOTDay || isThursday ? 'تعطیل' : '---'),
-          badgeColor
+          desc: descriptions.length > 0 ? descriptions.join(' + ') : (isHolidayOTDay || isThursday ? 'تعطیل' : '---')
       };
     });
 
-    // 3. Final Calculation (Apply Adjusted Target)
     const totalRawMowazafi = rawMowazafi;
     const deficit = ADJUSTED_TARGET - totalRawMowazafi;
 
@@ -280,15 +253,13 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
     let excessMowazafiOT = 0;
 
     if (deficit > 0) {
-        // Need to fill deficit from Night Float
         const amountToFill = Math.min(deficit, rawNightFloat);
         convertedNight = amountToFill;
         finalMowazafi += amountToFill;
         remainingNightOT = rawNightFloat - amountToFill;
     } else {
-        // Surplus Mowazafi -> Converts to Normal OT
         excessMowazafiOT = Math.abs(deficit);
-        finalMowazafi = ADJUSTED_TARGET; // Cap displayed base
+        finalMowazafi = ADJUSTED_TARGET; 
     }
 
     const finalNormalOT = rawNormalOT + remainingNightOT + excessMowazafiOT;
@@ -328,202 +299,218 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0 print:bg-white print:static print:block">
       <div className="absolute inset-0 print:hidden" onClick={onClose}></div>
       
-      {/* 
-        Print Isolation Wrapper:
-        print:relative print:w-full print:h-auto print:shadow-none print:border-none print:overflow-visible
-        This ensures only this container is rendered on the page in print mode.
-      */}
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:overflow-visible print:shadow-none print:border-none print:w-full print:max-w-none print:h-auto print:bg-white print:static">
         
-        {/* Header (Screen Only) */}
-        <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-                <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <FileDown size={20} className="text-emerald-600"/>
-                    گزارش کارکرد پرسنل
-                </h3>
-                
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <select 
-                        value={selectedUser}
-                        onChange={(e) => setSelectedUser(e.target.value)}
-                        className="flex-1 sm:flex-none bg-white text-black border border-slate-300 rounded-lg text-xs p-2 outline-none focus:ring-1 focus:ring-emerald-500 font-bold"
-                    >
-                        {staffList.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    
-                    <button onClick={handlePrint} className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition font-bold shadow text-xs">
-                        <Printer size={16} />
-                        <span className="hidden sm:inline">چاپ</span>
-                    </button>
-                    
-                    <button onClick={onClose} className="bg-white border border-slate-200 text-slate-400 hover:text-red-500 p-2 rounded-lg transition">
-                         <X size={18} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 text-xs">
-                <div className="flex items-center gap-1 font-bold whitespace-nowrap text-slate-800">
-                    <Filter size={14} />
-                    فیلتر:
-                </div>
-                <div className="flex gap-1 w-full sm:w-auto justify-center">
-                    <button onClick={() => setFilterType('VIEW')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'VIEW' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>ماه جاری</button>
-                    <button onClick={() => setFilterType('CUSTOM')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'CUSTOM' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>دستی</button>
-                </div>
-                {filterType === 'CUSTOM' && (
-                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2 lg:pt-0 lg:border-r lg:pr-2 lg:mr-2 border-slate-100 border-t lg:border-t-0 w-full lg:w-auto">
-                        <CompactDateSelect width="w-12" label="" value={getDateParts(customStart).d || ''} onChange={(v) => updateDatePart(true, 'd', v)} options={PERSIAN_DAYS} />
-                        <CompactDateSelect width="w-16" label="" value={getDateParts(customStart).m || ''} onChange={(v) => updateDatePart(true, 'm', v)} options={PERSIAN_MONTHS} />
-                        <CompactDateSelect width="w-14" label="" value={getDateParts(customStart).y || ''} onChange={(v) => updateDatePart(true, 'y', v)} options={availableYears} />
-                        <span className="text-slate-300">-</span>
-                        <CompactDateSelect width="w-12" label="" value={getDateParts(customEnd).d || ''} onChange={(v) => updateDatePart(false, 'd', v)} options={PERSIAN_DAYS} />
-                        <CompactDateSelect width="w-16" label="" value={getDateParts(customEnd).m || ''} onChange={(v) => updateDatePart(false, 'm', v)} options={PERSIAN_MONTHS} />
-                        <CompactDateSelect width="w-14" label="" value={getDateParts(customEnd).y || ''} onChange={(v) => updateDatePart(false, 'y', v)} options={availableYears} />
+        {/* ======================= SCREEN VIEW ======================= */}
+        <div id="screen-view" className="flex flex-col h-full print:hidden">
+            
+            {/* Header */}
+            <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 bg-slate-50">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <FileDown size={20} className="text-emerald-600"/>
+                        گزارش کارکرد پرسنل
+                    </h3>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <select 
+                            value={selectedUser}
+                            onChange={(e) => setSelectedUser(e.target.value)}
+                            className="flex-1 sm:flex-none bg-white text-black border border-slate-300 rounded-lg text-xs p-2 outline-none focus:ring-1 focus:ring-emerald-500 font-bold"
+                        >
+                            {staffList.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <button onClick={handlePrint} className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition font-bold shadow text-xs">
+                            <Printer size={16} />
+                            <span className="hidden sm:inline">چاپ</span>
+                        </button>
+                        <button onClick={onClose} className="bg-white border border-slate-200 text-slate-400 hover:text-red-500 p-2 rounded-lg transition">
+                            <X size={18} />
+                        </button>
                     </div>
-                )}
+                </div>
+                {/* Filters */}
+                <div className="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 text-xs">
+                    <div className="flex items-center gap-1 font-bold whitespace-nowrap text-slate-800">
+                        <Filter size={14} />
+                        فیلتر:
+                    </div>
+                    <div className="flex gap-1 w-full sm:w-auto justify-center">
+                        <button onClick={() => setFilterType('VIEW')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'VIEW' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>ماه جاری</button>
+                        <button onClick={() => setFilterType('CUSTOM')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'CUSTOM' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>دستی</button>
+                    </div>
+                    {filterType === 'CUSTOM' && (
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-2 lg:pt-0 lg:border-r lg:pr-2 lg:mr-2 border-slate-100 border-t lg:border-t-0 w-full lg:w-auto">
+                            <CompactDateSelect width="w-12" label="" value={getDateParts(customStart).d || ''} onChange={(v) => updateDatePart(true, 'd', v)} options={PERSIAN_DAYS} />
+                            <CompactDateSelect width="w-16" label="" value={getDateParts(customStart).m || ''} onChange={(v) => updateDatePart(true, 'm', v)} options={PERSIAN_MONTHS} />
+                            <CompactDateSelect width="w-14" label="" value={getDateParts(customStart).y || ''} onChange={(v) => updateDatePart(true, 'y', v)} options={availableYears} />
+                            <span className="text-slate-300">-</span>
+                            <CompactDateSelect width="w-12" label="" value={getDateParts(customEnd).d || ''} onChange={(v) => updateDatePart(false, 'd', v)} options={PERSIAN_DAYS} />
+                            <CompactDateSelect width="w-16" label="" value={getDateParts(customEnd).m || ''} onChange={(v) => updateDatePart(false, 'm', v)} options={PERSIAN_MONTHS} />
+                            <CompactDateSelect width="w-14" label="" value={getDateParts(customEnd).y || ''} onChange={(v) => updateDatePart(false, 'y', v)} options={availableYears} />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Content Body */}
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white">
+                <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-700 font-bold mb-1">کارکرد موظفی (خام)</div>
+                        <div className="text-xl font-black text-slate-900">{detailedStats.totals.rawMowazafi}</div>
+                    </div>
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                        <div className="text-[10px] text-indigo-800 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
+                        <div className="text-xl font-black text-indigo-900">{detailedStats.totals.nightFloat}</div>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <div className="text-[10px] text-blue-800 font-bold mb-1">اضافه کار عادی (نهایی)</div>
+                        <div className="text-xl font-black text-blue-900">{detailedStats.totals.finalNormalOT}</div>
+                    </div>
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+                        <div className="text-[10px] text-red-800 font-bold mb-1">اضافه کار تعطیل (نهایی)</div>
+                        <div className="text-xl font-black text-red-900">{detailedStats.totals.finalHolidayOT}</div>
+                    </div>
+                </div>
+                
+                <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-900 font-medium">
+                    <Calculator size={16} className="mt-0.5 shrink-0" />
+                    <div className="leading-5">
+                        <strong>فرمول محاسبه:</strong> موظفی پایه {detailedStats.totals.baseTarget} ساعت است. 
+                        {detailedStats.totals.deduction > 0 && (
+                            <span className="block">
+                                به دلیل {detailedStats.totals.deduction / 9} روز تعطیل رسمی (غیر جمعه/پنجشنبه)، {detailedStats.totals.deduction} ساعت کسر و موظفی نهایی <strong>{detailedStats.totals.adjustedTarget} ساعت</strong> منظور شد.
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <h4 className="font-bold text-slate-900 mb-3 text-sm flex items-center gap-2">
+                    <Clock size={16} className="text-emerald-600" />
+                    ریز کارکرد روزانه
+                </h4>
+                
+                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-xs text-right border-collapse min-w-[600px]">
+                        <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200">
+                            <th className="p-2 font-bold text-slate-900 border-l text-center w-24">تاریخ</th>
+                            <th className="p-2 font-bold text-slate-900 border-l text-center w-16">روز</th>
+                            <th className="p-2 font-bold text-slate-900 border-l text-center">وضعیت / شرح</th>
+                            <th className="p-2 font-bold text-slate-900 border-l text-center w-16 bg-emerald-100/50">موظفی</th>
+                            <th className="p-2 font-bold text-slate-900 border-l text-center w-16 bg-indigo-100/50">شب/شناور</th>
+                            <th className="p-2 font-bold text-slate-900 border-l text-center w-16 bg-blue-100/50">عادی/۵شنبه</th>
+                            <th className="p-2 font-bold text-slate-900 text-center w-16 bg-red-100/50">تعطیل</th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                        {detailedStats.history.map((row) => {
+                            const isHoliday = row.isHoliday || row.dayName === 'جمعه';
+                            const rowClass = isHoliday ? 'bg-red-50' : 'hover:bg-slate-50';
+                            return (
+                                <tr key={row.id} className={rowClass}>
+                                    <td className="p-2 text-slate-900 font-bold border-l text-center" dir="ltr">{toPersianDigits(row.date)}</td>
+                                    <td className={`p-2 font-bold border-l text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700' : 'text-slate-900'}`}>{row.dayName}</td>
+                                    <td className="p-2 border-l">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')}`}></span>
+                                            <span className="text-slate-900 font-medium truncate max-w-[200px]">{row.desc}</span>
+                                        </div>
+                                    </td>
+                                    <td className="p-2 text-center border-l font-bold text-emerald-900 bg-emerald-50/50">{toPersianDigits(row.mowazafi || '-')}</td>
+                                    <td className="p-2 text-center border-l font-bold text-indigo-900 bg-indigo-50/50">{toPersianDigits(row.nightFloat || '-')}</td>
+                                    <td className="p-2 text-center border-l font-bold text-blue-900 bg-blue-50/50">{toPersianDigits(row.normalOT || '-')}</td>
+                                    <td className="p-2 text-center font-bold text-red-900 bg-red-50/50">{toPersianDigits(row.holidayOT || '-')}</td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-slate-800 text-white font-black border-t-2 border-slate-900">
+                                <td colSpan={3} className="p-2 text-center border-l">مجموع کل</td>
+                                <td className="p-2 text-center border-l">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
+                                <td className="p-2 text-center border-l">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
+                                <td className="p-2 text-center border-l">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                                <td className="p-2 text-center">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
         </div>
 
-        {/* Print Header */}
-        <div className="hidden print:flex w-full justify-between items-center mb-4 p-4 border-2 border-black rounded-xl relative">
-             
-             {/* Right: Name (In Box) */}
-             <div className="flex flex-col items-start w-1/3 gap-1">
-                 <span className="text-sm font-bold text-black">نام پرسنل:</span>
-                 <div className="bg-white border border-black rounded-lg px-4 py-2 text-lg font-bold text-black">
-                     {selectedUser}
-                 </div>
-             </div>
-
-             {/* Center: Title & Month */}
-             <div className="flex flex-col items-center w-1/3 text-center">
-                 <h1 className="text-2xl font-black text-black whitespace-nowrap">گزارش کارکرد تفصیلی</h1>
-                 <div className="text-2xl font-bold text-black mt-2">
-                     {toPersianDigits(monthName)}
-                 </div>
-             </div>
-
-             {/* Left: Date Range & Report Date */}
-             <div className="flex flex-col items-end w-1/3">
-                 <div className="text-lg font-bold text-black dir-ltr">
-                     <span className="ml-1">بازه:</span>
-                     {headerDateRange}
-                 </div>
-                 <div className="text-sm font-bold text-black mt-2">
-                     تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
-                 </div>
-             </div>
-        </div>
-
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-3 md:p-6 print:p-0 print:overflow-visible bg-white">
-          
-          {/* Summary Cards (Screen Only) */}
-          <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center print:hidden">
-             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                 <div className="text-[10px] text-slate-700 font-bold mb-1">کارکرد موظفی (خام)</div>
-                 <div className="text-xl font-black text-slate-900">{detailedStats.totals.rawMowazafi}</div>
-             </div>
-             <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-                 <div className="text-[10px] text-indigo-800 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
-                 <div className="text-xl font-black text-indigo-900">{detailedStats.totals.nightFloat}</div>
-                 {detailedStats.totals.deficit > 0 && (
-                     <div className="text-[9px] text-indigo-700 mt-1">
-                         {detailedStats.totals.convertedNight} ساعت جهت جبران کسر موظفی
-                     </div>
-                 )}
-             </div>
-             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                 <div className="text-[10px] text-blue-800 font-bold mb-1">اضافه کار عادی (نهایی)</div>
-                 <div className="text-xl font-black text-blue-900">{detailedStats.totals.finalNormalOT}</div>
-                 <div className="text-[9px] text-blue-700 mt-1">
-                    (مازاد شب + ۵شنبه + عصر)
-                 </div>
-             </div>
-             <div className="bg-red-50 border border-red-100 rounded-lg p-3">
-                 <div className="text-[10px] text-red-800 font-bold mb-1">اضافه کار تعطیل (نهایی)</div>
-                 <div className="text-xl font-black text-red-900">{detailedStats.totals.finalHolidayOT}</div>
-             </div>
-          </div>
-          
-          {/* Calculation Hint (Screen Only) */}
-          <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-900 print:hidden font-medium">
-              <Calculator size={16} className="mt-0.5 shrink-0" />
-              <div className="leading-5">
-                  <strong>فرمول محاسبه:</strong> موظفی پایه {detailedStats.totals.baseTarget} ساعت است. 
-                  {detailedStats.totals.deduction > 0 && (
-                      <span className="block">
-                          به دلیل {detailedStats.totals.deduction / 9} روز تعطیل رسمی (غیر جمعه/پنجشنبه)، {detailedStats.totals.deduction} ساعت کسر و موظفی نهایی <strong>{detailedStats.totals.adjustedTarget} ساعت</strong> منظور شد.
-                      </span>
-                  )}
-                  <span className="block mt-1">
-                      {detailedStats.totals.deficit > 0 
-                      ? ` شما نسبت به موظفی ${detailedStats.totals.adjustedTarget} ساعته، ${detailedStats.totals.deficit} ساعت کسری داشتید که از ساعات شب‌کاری جبران شد.` 
-                      : ` شما موظفی ${detailedStats.totals.adjustedTarget} ساعته را تکمیل کردید و ${detailedStats.totals.excessMowazafi} ساعت مازاد موظفی به اضافه کار تبدیل شد.`}
-                  </span>
-              </div>
-          </div>
-
-          {/* Table */}
-          <h4 className="font-bold text-slate-900 mb-3 text-sm flex items-center gap-2 print:hidden">
-              <Clock size={16} className="text-emerald-600" />
-              ریز کارکرد روزانه
-          </h4>
-          
-          <div className="overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
-            <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[10pt]">
+        {/* ======================= PRINT VIEW (Isolated Single Table) ======================= */}
+        <div id="print-view" className="hidden print:block w-full">
+            <table className="w-full text-right border-collapse" style={{ pageBreakInside: 'auto' }}>
                 <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 print:bg-gray-200 print:border-black">
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center w-24">تاریخ</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center w-16">روز</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center">وضعیت / شرح</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 border-l print:border-l-0 print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
-                    <th className="p-2 print:py-4 print:text-lg print:border-b-2 print:border-black font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
-                </tr>
+                    {/* Header Row injected into table */}
+                    <tr className="print:break-inside-avoid">
+                        <th colSpan={7} className="p-0 border-none pb-4">
+                             <div className="w-full border-2 border-black rounded-xl p-4 flex justify-between items-center bg-white relative">
+                                 {/* Right: Name */}
+                                 <div className="flex flex-col items-start w-1/3 gap-1">
+                                     <span className="text-sm font-bold text-black">نام پرسنل:</span>
+                                     <div className="bg-white border border-black rounded-lg px-4 py-2 text-xl font-bold text-black">
+                                         {selectedUser}
+                                     </div>
+                                 </div>
+                                 {/* Center: Title */}
+                                 <div className="flex flex-col items-center w-1/3 text-center">
+                                     <h1 className="text-3xl font-black text-black whitespace-nowrap">گزارش کارکرد تفصیلی</h1>
+                                     <div className="text-2xl font-bold text-black mt-2">
+                                         {toPersianDigits(monthName)}
+                                     </div>
+                                 </div>
+                                 {/* Left: Info */}
+                                 <div className="flex flex-col items-end w-1/3">
+                                     <div className="text-lg font-bold text-black dir-ltr">
+                                         <span className="ml-1">بازه:</span>
+                                         {headerDateRange}
+                                     </div>
+                                     <div className="text-sm font-bold text-black mt-2">
+                                         تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
+                                     </div>
+                                 </div>
+                             </div>
+                        </th>
+                    </tr>
+
+                    {/* Column Headers */}
+                    <tr className="bg-gray-200 text-black border-y-2 border-black">
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-24">تاریخ</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-20">روز</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black">وضعیت / شرح</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-20">موظفی</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-20">شب/شناور</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-20">عادی/۵شنبه</th>
+                        <th className="py-3 px-2 text-lg font-bold text-center border-x border-black w-20">تعطیل</th>
+                    </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 print:divide-black">
-                {detailedStats.history.map((row) => {
-                    const isHoliday = row.isHoliday || row.dayName === 'جمعه';
-                    const rowClass = isHoliday ? 'bg-red-50 print:bg-gray-200' : 'hover:bg-slate-50 print:hover:bg-transparent';
-                    
-                    return (
-                        <tr key={row.id} className={`${rowClass} break-inside-avoid`}>
-                            <td className="p-2 print:p-1 text-slate-900 font-bold border-l print:border-l-0 text-center print:border-b print:border-black" dir="ltr">{toPersianDigits(row.date)}</td>
-                            <td className={`p-2 print:p-1 font-bold border-l print:border-l-0 text-center print:border-b print:border-black ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
-                            <td className="p-2 print:p-1 border-l print:border-l-0 print:border-b print:border-black">
-                                <div className="flex items-center gap-2">
-                                    <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
-                                    <span className="text-slate-900 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
-                                </div>
-                            </td>
-                            
-                            {/* Values */}
-                            <td className="p-2 print:p-1 text-center border-l print:border-l-0 print:border-b print:border-black font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.mowazafi || '-')}</td>
-                            <td className="p-2 print:p-1 text-center border-l print:border-l-0 print:border-b print:border-black font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.nightFloat || '-')}</td>
-                            <td className="p-2 print:p-1 text-center border-l print:border-l-0 print:border-b print:border-black font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{toPersianDigits(row.normalOT || '-')}</td>
-                            <td className="p-2 print:p-1 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black print:border-b print:border-black">{toPersianDigits(row.holidayOT || '-')}</td>
+                <tbody className="text-black">
+                    {detailedStats.history.map((row) => (
+                        <tr key={row.id} className={`${(row.isHoliday || row.dayName === 'جمعه') ? 'bg-gray-200' : 'bg-white'} border-b border-black break-inside-avoid`}>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black" dir="ltr">{toPersianDigits(row.date)}</td>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black">{row.dayName}</td>
+                             <td className="p-2 text-right text-[11pt] font-medium border-x border-black">{row.desc}</td>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black">{toPersianDigits(row.mowazafi || '-')}</td>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black">{toPersianDigits(row.nightFloat || '-')}</td>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black">{toPersianDigits(row.normalOT || '-')}</td>
+                             <td className="p-2 text-center text-[11pt] font-bold border-x border-black">{toPersianDigits(row.holidayOT || '-')}</td>
                         </tr>
-                    );
-                })}
+                    ))}
                 </tbody>
                 <tfoot>
-                     <tr className="bg-slate-800 text-white print:bg-gray-200 print:text-black font-black border-t-2 border-slate-900 print:border-black">
-                         <td colSpan={3} className="p-2 print:py-3 text-center border-l print:border-l-0 print:text-lg">مجموع کل</td>
-                         <td className="p-2 print:py-3 text-center border-l print:border-l-0 print:text-lg">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
-                         <td className="p-2 print:py-3 text-center border-l print:border-l-0 print:text-lg">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
-                         <td className="p-2 print:py-3 text-center border-l print:border-l-0 print:text-lg">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
-                         <td className="p-2 print:py-3 text-center print:text-lg">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
+                     <tr className="bg-gray-300 text-black font-black border-y-2 border-black">
+                         <td colSpan={3} className="py-3 px-2 text-center text-lg border-x border-black">مجموع کل</td>
+                         <td className="py-3 px-2 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
+                         <td className="py-3 px-2 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
+                         <td className="py-3 px-2 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                         <td className="py-3 px-2 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
                      </tr>
                 </tfoot>
             </table>
-          </div>
-          
         </div>
+
       </div>
     </div>
   );
