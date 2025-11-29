@@ -445,7 +445,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="lg:col-span-3 space-y-6">
             
             {/* Print Header */}
-            <div className="hidden print:grid grid-cols-3 items-center mb-2 border border-black rounded-lg p-3">
+            <div className="hidden print:grid grid-cols-3 items-center mb-2 p-3">
                 <div className="flex flex-col items-start gap-1 justify-self-start">
                     <h1 className="text-lg font-black text-black">برنامه شیفت</h1>
                     <span className="text-sm font-bold text-black">واحد تولید FMD</span>
