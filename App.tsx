@@ -1,18 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { PersonalReportModal } from './components/PersonalReportModal';
 import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus } from 'lucide-react';
 
 const MONTHS = [
-    { name: 'آذر', code: '09' },
-    { name: 'دی', code: '10' },
-    { name: 'بهمن', code: '11' },
-    { name: 'اسفند', code: '12' },
     { name: 'فروردین', code: '01' },
     { name: 'اردیبهشت', code: '02' },
     { name: 'خرداد', code: '03' },
@@ -20,7 +16,11 @@ const MONTHS = [
     { name: 'مرداد', code: '05' },
     { name: 'شهریور', code: '06' },
     { name: 'مهر', code: '07' },
-    { name: 'آبان', code: '08' }
+    { name: 'آبان', code: '08' },
+    { name: 'آذر', code: '09' },
+    { name: 'دی', code: '10' },
+    { name: 'بهمن', code: '11' },
+    { name: 'اسفند', code: '12' }
 ];
 
 const STORAGE_KEYS = {
@@ -132,8 +132,20 @@ const App: React.FC = () => {
 
   // Calendar State
   const [currentYear, setCurrentYear] = useState(1404);
-  const [monthIndex, setMonthIndex] = useState(0); // 0 = Azar (start of app data)
+  const [monthIndex, setMonthIndex] = useState(8); // Default to Azar (Index 8 in new sorted list) or based on data
   
+  // Initialize monthIndex based on schedule data to avoid mismatch
+  useEffect(() => {
+      if (schedule.length > 0) {
+          // Find the month of the first entry usually, or set a default
+          // For now, we keep it simple or default to Azar (09) which is index 8
+          const firstDate = schedule[0].date; // e.g., 1404/09/01
+          const mCode = firstDate.split('/')[1];
+          const idx = MONTHS.findIndex(m => m.code === mCode);
+          if (idx !== -1) setMonthIndex(idx);
+      }
+  }, []);
+
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
   // Derived
@@ -273,17 +285,83 @@ const App: React.FC = () => {
     if (nextYear !== currentYear) setCurrentYear(nextYear);
   };
 
+  // Manual Generation from Settings
+  const handleManualAddNextMonth = () => {
+      if (schedule.length === 0) return;
+
+      const lastEntry = schedule[schedule.length - 1];
+      const lastDateParts = lastEntry.date.split('/');
+      const lastYear = parseInt(lastDateParts[0]);
+      const lastMonth = parseInt(lastDateParts[1]);
+
+      let nextYear = lastYear;
+      let nextMonth = lastMonth + 1;
+      if (nextMonth > 12) {
+          nextMonth = 1;
+          nextYear++;
+      }
+      const nextMonthCode = String(nextMonth).padStart(2, '0');
+      const nextMonthName = MONTHS.find(m => m.code === nextMonthCode)?.name || 'نامشخص';
+      const daysInNextMonth = getDaysInPersianMonth(nextMonthCode);
+      const nextMonthKey = `${nextYear}/${nextMonthCode}`;
+
+      if (confirm(`آیا می‌خواهید برنامه برای ${nextMonthName} ${nextYear} تولید شود؟`)) {
+          // Check if already exists (partially or fully)
+          const exists = schedule.some(s => s.date.startsWith(`${nextYear}/${nextMonthCode}`));
+          if (exists) {
+              alert('بخشی از برنامه این ماه قبلا تولید شده است.');
+              return;
+          }
+
+          const weekDays = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+          const startDayIndex = (weekDays.indexOf(lastEntry.dayName) + 1) % 7;
+
+          const newMonthData = generateNextMonth(
+                 schedule, 
+                 nextYear, 
+                 nextMonthCode, 
+                 startDayIndex, 
+                 personnelList,
+                 daysInNextMonth
+          );
+          
+          setSchedule(prev => [...prev, ...newMonthData]);
+          alert(`برنامه ${nextMonthName} ${nextYear} با موفقیت تولید شد.`);
+      }
+  };
+
+  // Calculate info for the manual button
+  const nextGenInfo = useMemo(() => {
+     if (schedule.length === 0) return { label: '---', year: '---' };
+     const lastEntry = schedule[schedule.length - 1];
+     const lastDateParts = lastEntry.date.split('/');
+     let y = parseInt(lastDateParts[0]);
+     let m = parseInt(lastDateParts[1]) + 1;
+     if (m > 12) { m = 1; y++; }
+     const mCode = String(m).padStart(2, '0');
+     const mName = MONTHS.find(mo => mo.code === mCode)?.name || '---';
+     return { label: mName, year: y };
+  }, [schedule]);
+
+
   const handlePrevMonth = () => {
-    if (monthIndex > 0) {
-       const prevIdx = monthIndex - 1;
-       const prevMonthObj = MONTHS[prevIdx % MONTHS.length];
-       let prevYear = currentYear;
-       if (currentMonth.code === '01' && prevMonthObj.code === '12') {
-           prevYear = currentYear - 1;
+       // Logic to move back
+       // We can simply loop backward through our MONTHS array or logic
+       // Current Month Index
+       const currentIndex = monthIndex;
+       const newIndex = currentIndex - 1;
+       
+       // Sync year if we crossed boundary
+       const currentM = MONTHS[currentIndex % 12];
+       const prevM = MONTHS[(newIndex + 1200) % 12]; // safe mod
+       
+       let newYear = currentYear;
+       if (currentM.code === '01' && prevM.code === '12') {
+           newYear = currentYear - 1;
        }
-       setMonthIndex(prevIdx);
-       setCurrentYear(prevYear);
-    }
+       
+       setMonthIndex(newIndex);
+       setCurrentYear(newYear);
   };
 
   const handleUpdateShift = (id: number, field: 'dayShiftPerson' | 'nightShiftPerson' | 'onCallPerson', value: string) => {
@@ -1046,6 +1124,31 @@ const App: React.FC = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* 4. Next Month Generation (Manual) */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <CalendarPlus className="text-purple-500" size={20} />
+                            تولید تقویم آینده
+                        </h2>
+                        <span className="text-xs bg-white border px-2 py-1 rounded text-slate-500">هوشمند</span>
+                    </div>
+                    
+                    <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="text-sm text-slate-600 leading-6">
+                            <p>اگر می‌خواهید برنامه ماه‌های آینده را از هم‌اکنون تولید کنید، از این بخش استفاده کنید.</p>
+                            <p className="text-xs text-slate-400">سیستم به صورت خودکار آخرین ماه موجود را شناسایی کرده و ماه بعد از آن را تولید می‌کند.</p>
+                        </div>
+                        <button 
+                            onClick={handleManualAddNextMonth}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md flex items-center gap-2 whitespace-nowrap"
+                        >
+                            <CalendarPlus size={18} />
+                            ایجاد برنامه {nextGenInfo.label} {nextGenInfo.year}
+                        </button>
                     </div>
                 </div>
 
