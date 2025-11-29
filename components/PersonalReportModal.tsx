@@ -413,22 +413,22 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     <table className="w-full table-fixed text-center text-[10px] sm:text-xs md:text-sm border-collapse">
                         <thead className="bg-slate-800 text-white">
                             <tr>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[18%] sm:w-auto">تاریخ</th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">روز</th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[26%] sm:w-auto">
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[16%] sm:w-auto">تاریخ</th>
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[14%] sm:w-auto">روز</th>
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[30%] sm:w-auto">
                                     <span className="sm:hidden">شرح</span>
                                     <span className="hidden sm:inline">وضعیت / شرح</span>
                                 </th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">موظفی</th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">
                                     <span className="sm:hidden">روز</span>
                                     <span className="hidden sm:inline">روز/۵شنبه</span>
                                 </th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">
                                     <span className="sm:hidden">شب</span>
                                     <span className="hidden sm:inline">شب/شناور</span>
                                 </th>
-                                <th className="p-1 sm:p-3 font-bold w-[12%] sm:w-auto">تعطیل</th>
+                                <th className="p-1 sm:p-3 font-bold w-[10%] sm:w-auto">تعطیل</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-400 bg-white">
