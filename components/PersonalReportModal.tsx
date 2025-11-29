@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ShiftEntry, PersonName } from '../types';
-import { X, Printer, Clock, FileDown, Filter, ChevronDown } from 'lucide-react';
+import { X, Printer, Clock, FileDown, Filter, ChevronDown, Calculator } from 'lucide-react';
 
 interface PersonalReportModalProps {
   isOpen: boolean;
@@ -81,7 +81,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
       const current = isStart ? customStart : customEnd;
       const parts = getDateParts(current);
       
-      // Defaults if starting fresh
       const defaultYear = availableYears[0];
       
       const newParts = {
@@ -96,7 +95,6 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
       else setCustomEnd(newDateStr);
   };
 
-  // 1. Determine the list of shifts to analyze based on FilterType
   const targetSchedule = useMemo(() => {
     switch (filterType) {
         case 'CUSTOM':
@@ -109,168 +107,202 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
         case 'VIEW':
         default:
-            // Default to the month passed from dashboard
             return schedule;
     }
   }, [filterType, customStart, customEnd, schedule, fullSchedule]);
 
-  // 2. Detailed Breakdown Calculation
+  // --- WORK HOUR CALCULATION ENGINE ---
   const detailedStats = useMemo(() => {
-    const stats = {
-      normalHours: 0,       // Sat-Wed (Non-Holiday)
-      holidayThursdayHours: 0, // Thursday OR Holiday (Non-Friday)
-      fridayHours: 0,       // Friday Only
-      nightHours: 0,        // Total Night Hours (13h blocks)
-      totalSum: 0
-    };
+    // 1. Calculate Target Deduction based on Holidays
+    // Logic: 198 is base. Deduct 9h for each Official Holiday that falls on Sat-Wed.
+    const MOWAZAFI_BASE_TARGET = 198;
+    
+    const holidayDeductionHours = targetSchedule.reduce((total, entry) => {
+        const isFriday = entry.dayName === 'جمعه';
+        const isThursday = entry.dayName === 'پنج‌شنبه';
+        // Check if it's a Normal Work Day (Sat-Wed) AND is marked as Holiday
+        if (!isFriday && !isThursday && entry.isHoliday) {
+            return total + 9;
+        }
+        return total;
+    }, 0);
+
+    const ADJUSTED_TARGET = Math.max(0, MOWAZAFI_BASE_TARGET - holidayDeductionHours);
+
+    // 2. Raw Accumulators
+    let rawMowazafi = 0;       // Hours from 08-17 on Normal Days
+    let rawNightFloat = 0;     // Hours from Night Shifts on Normal Days (can fill deficit)
+    let rawNormalOT = 0;       // Hours from 17-19 Normal Days + Thursdays
+    let rawHolidayOT = 0;      // Hours from Fridays + Holidays
 
     const history = targetSchedule.map(entry => {
-      // Initialize Row Data
-      let shiftType = 'OFF';
-      let hours = 0;
-      let description = '';
-      let timeRange = 'OFF'; 
-      let statusClass = ''; 
-      let badgeColor = '';
-
-      // --- CONTEXT GATHERING ---
+      // Logic for current day (00:00 to 24:00)
+      
       const isFriday = entry.dayName === 'جمعه';
       const isThursday = entry.dayName === 'پنج‌شنبه';
-      // Q1: Is Today Holiday? (Thursday, Friday OR Official Holiday)
-      const isHolidayDay = isThursday || isFriday || entry.isHoliday;
-
-      // Assignments
-      const isDayShift = entry.dayShiftPerson === selectedUser;
-      const isNightShift = entry.nightShiftPerson === selectedUser;
-
-      // Lookback Context
-      const fullIndex = fullSchedule.findIndex(s => s.id === entry.id);
+      const isOfficialHoliday = entry.isHoliday;
       
-      let prevEntry: ShiftEntry | undefined;
-      let twoDaysAgoEntry: ShiftEntry | undefined;
+      // "Holiday Day" for Overtime purposes (Fridays & Official Holidays)
+      const isHolidayOTDay = isFriday || isOfficialHoliday;
+      // "Normal Day" for Mowazafi purposes (Sat-Wed, NOT Holiday)
+      const isNormalWorkDay = !isHolidayOTDay && !isThursday;
 
-      if (fullIndex !== -1) {
+      // User Status
+      const isDayShift = entry.dayShiftPerson === selectedUser; // 08-19
+      const isNightShift = entry.nightShiftPerson === selectedUser; // 19-24 (+00-08 next day)
+      
+      // Lookback for "00-08" status
+      const fullIndex = fullSchedule.findIndex(s => s.id === entry.id);
+      let prevEntry: ShiftEntry | undefined;
+      if (fullIndex !== -1 && fullIndex > 0) {
           prevEntry = fullSchedule[fullIndex - 1];
-          twoDaysAgoEntry = fullSchedule[fullIndex - 2];
       } else {
-          // Fallback logic
+          // Fallback if at start of array (approximate)
           const dateIdx = fullSchedule.findIndex(s => s.date === entry.date);
-          if (dateIdx !== -1) {
-              prevEntry = fullSchedule[dateIdx - 1];
-              twoDaysAgoEntry = fullSchedule[dateIdx - 2];
+          if (dateIdx !== -1 && dateIdx > 0) prevEntry = fullSchedule[dateIdx - 1];
+      }
+      const wasNightYesterday = prevEntry?.nightShiftPerson === selectedUser; // Worked 19-24 yesterday -> Works 00-08 today
+
+      // --- Per Day Accumulators ---
+      let dayMowazafi = 0;
+      let dayNightFloat = 0;
+      let dayNormalOT = 0;
+      let dayHolidayOT = 0;
+      let descriptions: string[] = [];
+
+      // BLOCK A: 00:00 - 08:00 (8 Hours)
+      if (wasNightYesterday) {
+          // User worked 00-08
+          if (isHolidayOTDay) {
+              dayHolidayOT += 8;
+              descriptions.push('شب‌کاری (بامداد تعطیل)');
+          } else if (isThursday) {
+              dayNormalOT += 8;
+              descriptions.push('شب‌کاری (بامداد ۵شنبه)');
+          } else {
+              // Normal Day Night Part
+              dayNightFloat += 8;
+              descriptions.push('شب‌کاری (بامداد)');
           }
       }
 
-      const wasNightYesterday = prevEntry?.nightShiftPerson === selectedUser;
-      const wasNightTwoDaysAgo = twoDaysAgoEntry?.nightShiftPerson === selectedUser;
-
-      // --- LOGIC TREE ---
-
-      // 1. QUESTION ONE: Is Today Holiday?
-      if (isHolidayDay) {
-        if (isDayShift) {
-           shiftType = 'Day';
-           timeRange = '۰۸:۰۰ - ۱۹:۰۰';
-           hours = 11;
-           description = isFriday ? 'جمعه کاری' : (isThursday ? 'شیفت پنج‌شنبه' : 'تعطیل کاری');
-           badgeColor = 'bg-amber-100 text-amber-800 border-amber-200';
-           
-           if (isFriday) stats.fridayHours += 11;
-           else stats.holidayThursdayHours += 11;
-        } 
-        else if (isNightShift) {
-           shiftType = 'Night';
-           timeRange = '۱۹:۰۰ - ۰۸:۰۰';
-           hours = 13;
-           description = 'شیفت شب تعطیل';
-           badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
-           
-           stats.nightHours += 13;
-        } 
-        else {
-           // Holiday OFF
-           if (wasNightYesterday) {
-               shiftType = 'Rest';
-               timeRange = 'خروج ۰۸:۰۰';
-               description = 'استراحت (خروج از شب)';
-               statusClass = 'text-slate-400 italic';
-               badgeColor = 'bg-slate-100 text-slate-500';
-           } else {
-               shiftType = 'OFF';
-               timeRange = 'OFF';
-               description = isFriday ? 'جمعه' : 'تعطیل';
-               statusClass = 'text-slate-300';
-               badgeColor = 'bg-slate-50 text-slate-400 border-slate-100';
-           }
-        }
-      } 
-      else {
-        // NORMAL DAY (Sat-Wed)
-        
-        // 2. QUESTION TWO: Night Shift Cycle Check
-        
-        // State A: Tonight is Night Shift?
-        if (isNightShift) {
-             shiftType = 'Night';
-             timeRange = '۱۹:۰۰ - ۰۸:۰۰';
-             hours = 13;
-             description = 'شیفت شب (شروع ۱۹)';
-             badgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-200';
-             
-             stats.nightHours += 13;
-        }
-        // State B: Last Night was Night Shift?
-        else if (wasNightYesterday) {
-             shiftType = 'Rest';
-             timeRange = 'خروج ۰۸:۰۰';
-             description = 'استراحت (پایان شب‌کاری)';
-             statusClass = 'bg-slate-50 text-slate-500 italic';
-             badgeColor = 'bg-slate-100 text-slate-500';
-        }
-        // State C: 2 Days Ago was Night Shift? (The 48h Rule)
-        else if (wasNightTwoDaysAgo) {
-             shiftType = 'NormalLong';
-             timeRange = '۰۸:۰۰ - ۱۹:۰۰'; 
-             hours = 11;
-             description = 'قانون ۴۸ ساعت (تا ۱۹)';
-             statusClass = 'text-emerald-700 font-bold';
-             badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-             
-             stats.normalHours += 11;
-        }
-        // 3. QUESTION THREE: Default Normal Day (Work 08-17)
-        else {
-             shiftType = 'Normal';
-             timeRange = '۰۸:۰۰ - ۱۷:۰۰'; 
-             hours = 9;
-             description = 'کار عادی';
-             statusClass = 'text-slate-700';
-             badgeColor = 'bg-white border-slate-200 text-slate-600';
-             
-             stats.normalHours += 9;
-        }
+      // BLOCK B: 08:00 - 17:00 (9 Hours)
+      if (isDayShift) {
+          if (isHolidayOTDay) {
+              dayHolidayOT += 9;
+              descriptions.push('شیفت روز (تعطیل)');
+          } else if (isThursday) {
+              dayNormalOT += 9;
+              descriptions.push('شیفت روز (۵شنبه)');
+          } else {
+              dayMowazafi += 9;
+              descriptions.push('شیفت روز (عادی)');
+          }
+      } else if (!isDayShift && !isNightShift && !wasNightYesterday) {
+          // Not on shift, not resting from last night
+          if (isNormalWorkDay) {
+              // Standard Work Day (Office Hours)
+              dayMowazafi += 9;
+              descriptions.push('کار روزانه (غیرشیفت)');
+          }
+          // If Thursday/Holiday and not on shift -> OFF (0 hours)
       }
 
-      return { ...entry, shiftType, hours, description, timeRange, statusClass, badgeColor };
+      // BLOCK C: 17:00 - 19:00 (2 Hours)
+      if (isDayShift) {
+          if (isHolidayOTDay) {
+              dayHolidayOT += 2;
+          } else if (isThursday) {
+              dayNormalOT += 2;
+          } else {
+              // Normal Day 17-19 is Always Normal OT
+              dayNormalOT += 2; 
+              if (!descriptions.includes('اضافه کار عصر')) descriptions.push('اضافه کار عصر');
+          }
+      }
+
+      // BLOCK D: 19:00 - 24:00 (5 Hours)
+      if (isNightShift) {
+          if (isHolidayOTDay) {
+              dayHolidayOT += 5;
+              descriptions.push('شیفت شب (شروع تعطیل)');
+          } else if (isThursday) {
+              dayNormalOT += 5;
+              descriptions.push('شیفت شب (شروع ۵شنبه)');
+          } else {
+              // Normal Day Night Start
+              dayNightFloat += 5;
+              descriptions.push('شیفت شب (شروع)');
+          }
+      }
+
+      // --- Summary for Row ---
+      rawMowazafi += dayMowazafi;
+      rawNightFloat += dayNightFloat;
+      rawNormalOT += dayNormalOT;
+      rawHolidayOT += dayHolidayOT;
+
+      let badgeColor = 'bg-white border-slate-200 text-slate-400';
+      if (dayHolidayOT > 0) badgeColor = 'bg-red-50 text-red-700 border-red-200';
+      else if (dayNormalOT > 0) badgeColor = 'bg-blue-50 text-blue-700 border-blue-200';
+      else if (dayNightFloat > 0) badgeColor = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      else if (dayMowazafi > 0) badgeColor = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+      return {
+          ...entry,
+          mowazafi: dayMowazafi,
+          nightFloat: dayNightFloat,
+          normalOT: dayNormalOT,
+          holidayOT: dayHolidayOT,
+          desc: descriptions.length > 0 ? descriptions.join(' + ') : (isHolidayOTDay || isThursday ? 'تعطیل' : '---'),
+          badgeColor
+      };
     });
 
-    stats.totalSum = stats.normalHours + stats.holidayThursdayHours + stats.fridayHours + stats.nightHours;
-    return { stats, history };
+    // 3. Final Calculation (Apply Adjusted Target)
+    const totalRawMowazafi = rawMowazafi;
+    const deficit = ADJUSTED_TARGET - totalRawMowazafi;
+
+    let finalMowazafi = totalRawMowazafi;
+    let convertedNight = 0;
+    let remainingNightOT = rawNightFloat;
+    let excessMowazafiOT = 0;
+
+    if (deficit > 0) {
+        // Need to fill deficit from Night Float
+        const amountToFill = Math.min(deficit, rawNightFloat);
+        convertedNight = amountToFill;
+        finalMowazafi += amountToFill;
+        remainingNightOT = rawNightFloat - amountToFill;
+    } else {
+        // Surplus Mowazafi -> Converts to Normal OT
+        excessMowazafiOT = Math.abs(deficit);
+        finalMowazafi = ADJUSTED_TARGET; // Cap displayed base
+    }
+
+    const finalNormalOT = rawNormalOT + remainingNightOT + excessMowazafiOT;
+    
+    return {
+        history,
+        totals: {
+            baseTarget: MOWAZAFI_BASE_TARGET,
+            deduction: holidayDeductionHours,
+            adjustedTarget: ADJUSTED_TARGET,
+            rawMowazafi,
+            deficit: deficit > 0 ? deficit : 0,
+            nightFloat: rawNightFloat,
+            convertedNight,
+            excessMowazafi: excessMowazafiOT,
+            finalNormalOT,
+            finalHolidayOT: rawHolidayOT,
+        }
+    };
+
   }, [targetSchedule, fullSchedule, selectedUser]);
 
   const handlePrint = () => {
     const originalTitle = document.title;
-    let fileName = `Report-${selectedUser.replace(/\s+/g, '_')}`;
-
-    if (filterType === 'VIEW') {
-            fileName += `-${monthName.replace(/\s+/g, '_')}`;
-    } else if (filterType === 'CUSTOM') {
-            const start = customStart ? customStart.replace(/\//g, '-') : 'Start';
-            const end = customEnd ? customEnd.replace(/\//g, '-') : 'End';
-            fileName += `-${start}_to_${end}`;
-    }
-
-    document.title = fileName;
+    document.title = `Report-${selectedUser}`;
     document.body.classList.add('print-mode-modal');
     window.print();
     setTimeout(() => {
@@ -283,19 +315,16 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm print:p-0">
-      
-      {/* Overlay to close on click outside */}
       <div className="absolute inset-0 print:hidden" onClick={onClose}></div>
       
-      {/* Modal Container - Max height 80vh to ensure it fits */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden print:fixed print:inset-0 print:h-full print:w-full print:max-h-none print:max-w-none print:shadow-none print:z-[9999] print:bg-white">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:fixed print:inset-0 print:h-full print:w-full print:max-h-none print:max-w-none print:shadow-none print:z-[9999] print:bg-white">
         
-        {/* Fixed Header */}
+        {/* Header */}
         <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                 <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
                     <FileDown size={20} className="text-emerald-600"/>
-                    گزارش کارکرد
+                    گزارش کارکرد پرسنل
                 </h3>
                 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -307,10 +336,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                         {staffList.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     
-                    <button 
-                        onClick={handlePrint}
-                        className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition font-bold shadow text-xs"
-                    >
+                    <button onClick={handlePrint} className="flex items-center gap-2 bg-black text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition font-bold shadow text-xs">
                         <Printer size={16} />
                         <span className="hidden sm:inline">چاپ</span>
                     </button>
@@ -321,42 +347,34 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 </div>
             </div>
 
-            {/* Compact Filters */}
+            {/* Filters */}
             <div className="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 text-xs">
                 <div className="flex items-center gap-1 font-bold whitespace-nowrap text-slate-500">
                     <Filter size={14} />
-                    بازه:
+                    فیلتر:
                 </div>
-                
                 <div className="flex gap-1 w-full sm:w-auto justify-center">
                     <button onClick={() => setFilterType('VIEW')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'VIEW' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>ماه جاری</button>
                     <button onClick={() => setFilterType('CUSTOM')} className={`px-2 py-1 rounded transition font-bold border ${filterType === 'CUSTOM' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>دستی</button>
                 </div>
-
                 {filterType === 'CUSTOM' && (
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-2 lg:pt-0 lg:border-r lg:pr-2 lg:mr-2 border-slate-100 border-t lg:border-t-0 w-full lg:w-auto">
-                        <div className="flex items-center gap-1">
-                            <span className="font-bold">از:</span>
-                            <CompactDateSelect width="w-12" label="" value={getDateParts(customStart).d || ''} onChange={(v) => updateDatePart(true, 'd', v)} options={PERSIAN_DAYS} />
-                            <CompactDateSelect width="w-16" label="" value={getDateParts(customStart).m || ''} onChange={(v) => updateDatePart(true, 'm', v)} options={PERSIAN_MONTHS} />
-                            <CompactDateSelect width="w-14" label="" value={getDateParts(customStart).y || ''} onChange={(v) => updateDatePart(true, 'y', v)} options={availableYears} />
-                        </div>
+                        <CompactDateSelect width="w-12" label="" value={getDateParts(customStart).d || ''} onChange={(v) => updateDatePart(true, 'd', v)} options={PERSIAN_DAYS} />
+                        <CompactDateSelect width="w-16" label="" value={getDateParts(customStart).m || ''} onChange={(v) => updateDatePart(true, 'm', v)} options={PERSIAN_MONTHS} />
+                        <CompactDateSelect width="w-14" label="" value={getDateParts(customStart).y || ''} onChange={(v) => updateDatePart(true, 'y', v)} options={availableYears} />
                         <span className="text-slate-300">-</span>
-                        <div className="flex items-center gap-1">
-                            <span className="font-bold">تا:</span>
-                            <CompactDateSelect width="w-12" label="" value={getDateParts(customEnd).d || ''} onChange={(v) => updateDatePart(false, 'd', v)} options={PERSIAN_DAYS} />
-                            <CompactDateSelect width="w-16" label="" value={getDateParts(customEnd).m || ''} onChange={(v) => updateDatePart(false, 'm', v)} options={PERSIAN_MONTHS} />
-                            <CompactDateSelect width="w-14" label="" value={getDateParts(customEnd).y || ''} onChange={(v) => updateDatePart(false, 'y', v)} options={availableYears} />
-                        </div>
+                        <CompactDateSelect width="w-12" label="" value={getDateParts(customEnd).d || ''} onChange={(v) => updateDatePart(false, 'd', v)} options={PERSIAN_DAYS} />
+                        <CompactDateSelect width="w-16" label="" value={getDateParts(customEnd).m || ''} onChange={(v) => updateDatePart(false, 'm', v)} options={PERSIAN_MONTHS} />
+                        <CompactDateSelect width="w-14" label="" value={getDateParts(customEnd).y || ''} onChange={(v) => updateDatePart(false, 'y', v)} options={availableYears} />
                     </div>
                 )}
             </div>
         </div>
 
-        {/* Print Only Header */}
+        {/* Print Header */}
         <div className="hidden print:flex justify-between items-end border-b-2 border-black pb-4 mb-6 pt-4 px-8">
              <div>
-                 <h1 className="text-2xl font-black text-black">گزارش کارکرد پرسنل</h1>
+                 <h1 className="text-2xl font-black text-black">گزارش کارکرد تفصیلی</h1>
                  <div className="mt-2 flex items-center gap-2">
                     <span>نام پرسنل:</span>
                     <span className="font-bold bg-black text-white px-3 py-0.5 rounded-md print:bg-gray-200 print:text-black">{selectedUser}</span>
@@ -364,45 +382,69 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
              </div>
              <div className="text-left">
                  <div className="text-sm font-bold border border-black px-3 py-1 rounded mb-2">
-                    {filterType === 'VIEW' ? `بازه: ${monthName}` : 
-                     `بازه: ${customStart || '...'} تا ${customEnd || '...'}`}
+                    {filterType === 'VIEW' ? `بازه: ${monthName}` : `بازه: ${customStart || '...'} تا ${customEnd || '...'}`}
                  </div>
-                 <p className="text-xs text-black font-medium">تاریخ چاپ: {new Date().toLocaleDateString('fa-IR')}</p>
+                 <p className="text-xs text-black font-medium">تاریخ گزارش: {new Date().toLocaleDateString('fa-IR')}</p>
              </div>
         </div>
 
-        {/* Scrollable Content */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto p-3 md:p-6 print:p-0 print:overflow-visible bg-white">
           
-          {/* Summary Table */}
-          <div className="mb-6 overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
-             <table className="w-full text-center text-xs min-w-[500px]">
-                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 print:border-black print:text-black">
-                   <tr>
-                      <th className="p-2 border-l border-slate-200 print:border-black">عادی</th>
-                      <th className="p-2 border-l border-slate-200 print:border-black">تعطیل/۵شنبه</th>
-                      <th className="p-2 border-l border-slate-200 print:border-black">جمعه</th>
-                      <th className="p-2 border-l border-slate-200 print:border-black">شب</th>
-                      <th className="p-2 bg-slate-100 print:bg-gray-200 font-black">مجموع</th>
-                   </tr>
-                </thead>
-                <tbody>
-                   <tr className="divide-x divide-x-reverse divide-slate-200 print:divide-black text-sm">
-                      <td className="p-3 font-bold">{detailedStats.stats.normalHours}</td>
-                      <td className="p-3 text-amber-700 font-bold print:text-black">{detailedStats.stats.holidayThursdayHours}</td>
-                      <td className="p-3 text-red-600 font-bold print:text-black">{detailedStats.stats.fridayHours}</td>
-                      <td className="p-3 text-indigo-700 font-bold print:text-black">{detailedStats.stats.nightHours}</td>
-                      <td className="p-3 font-black bg-slate-50 print:bg-gray-100">{detailedStats.stats.totalSum}</td>
-                   </tr>
-                </tbody>
-             </table>
+          {/* Summary Cards (Calculation Breakdown) */}
+          <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center print:grid-cols-4">
+             {/* 1. Base Generated */}
+             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:border-black">
+                 <div className="text-[10px] text-slate-500 font-bold mb-1 print:text-black">کارکرد موظفی (خام)</div>
+                 <div className="text-xl font-black text-slate-700 print:text-black">{detailedStats.totals.rawMowazafi}</div>
+             </div>
+             {/* 2. Night Float */}
+             <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 print:border-black print:bg-white">
+                 <div className="text-[10px] text-indigo-600 font-bold mb-1 print:text-black">ذخیره شب‌کاری (عادی)</div>
+                 <div className="text-xl font-black text-indigo-700 print:text-black">{detailedStats.totals.nightFloat}</div>
+                 {detailedStats.totals.deficit > 0 && (
+                     <div className="text-[9px] text-indigo-500 mt-1 print:text-black">
+                         {detailedStats.totals.convertedNight} ساعت جهت جبران کسر موظفی
+                     </div>
+                 )}
+             </div>
+             {/* 3. Normal OT */}
+             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 print:border-black print:bg-white">
+                 <div className="text-[10px] text-blue-600 font-bold mb-1 print:text-black">اضافه کار عادی (نهایی)</div>
+                 <div className="text-xl font-black text-blue-700 print:text-black">{detailedStats.totals.finalNormalOT}</div>
+                 <div className="text-[9px] text-blue-400 mt-1 print:hidden">
+                    (مازاد شب + ۵شنبه + عصر)
+                 </div>
+             </div>
+             {/* 4. Holiday OT */}
+             <div className="bg-red-50 border border-red-100 rounded-lg p-3 print:border-black print:bg-white">
+                 <div className="text-[10px] text-red-600 font-bold mb-1 print:text-black">اضافه کار تعطیل (نهایی)</div>
+                 <div className="text-xl font-black text-red-700 print:text-black">{detailedStats.totals.finalHolidayOT}</div>
+             </div>
+          </div>
+          
+          {/* Calculation Hint */}
+          <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-800 print:border-black print:text-black print:bg-transparent">
+              <Calculator size={16} className="print:hidden mt-0.5 shrink-0" />
+              <div className="leading-5">
+                  <strong>فرمول محاسبه:</strong> موظفی پایه {detailedStats.totals.baseTarget} ساعت است. 
+                  {detailedStats.totals.deduction > 0 && (
+                      <span className="block">
+                          به دلیل {detailedStats.totals.deduction / 9} روز تعطیل رسمی (غیر جمعه/پنجشنبه)، {detailedStats.totals.deduction} ساعت کسر و موظفی نهایی <strong>{detailedStats.totals.adjustedTarget} ساعت</strong> منظور شد.
+                      </span>
+                  )}
+                  <span className="block mt-1">
+                      {detailedStats.totals.deficit > 0 
+                      ? ` شما نسبت به موظفی ${detailedStats.totals.adjustedTarget} ساعته، ${detailedStats.totals.deficit} ساعت کسری داشتید که از ساعات شب‌کاری جبران شد.` 
+                      : ` شما موظفی ${detailedStats.totals.adjustedTarget} ساعته را تکمیل کردید و ${detailedStats.totals.excessMowazafi} ساعت مازاد موظفی به اضافه کار تبدیل شد.`}
+                  </span>
+              </div>
           </div>
 
-          {/* Detailed Table */}
+          {/* Table */}
           <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2 print:text-black">
               <Clock size={16} className="text-emerald-600 print:hidden" />
-              ریز کارکرد
-              <span className="text-xs font-normal text-slate-500 print:text-gray-600">({detailedStats.history.length} مورد)</span>
+              ریز کارکرد روزانه
           </h4>
           
           <div className="overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
@@ -411,51 +453,38 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 <tr className="bg-slate-50 border-b border-slate-200 print:bg-gray-200 print:border-black">
                     <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-24">تاریخ</th>
                     <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16">روز</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-24">شیفت</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-24">حضور</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black">توضیحات</th>
-                    <th className="p-2 font-bold text-slate-700 w-12 text-center print:text-black">ساعت</th>
+                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center">وضعیت / شرح</th>
+                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-emerald-50 print:bg-transparent">موظفی</th>
+                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-indigo-50 print:bg-transparent">شب/شناور</th>
+                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-blue-50 print:bg-transparent">عادی/۵شنبه</th>
+                    <th className="p-2 font-bold text-slate-700 text-center w-16 bg-red-50 print:bg-transparent print:text-black">تعطیل</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
-                {detailedStats.history.length > 0 ? (
-                    detailedStats.history.map((row) => (
-                        <tr key={row.id} className={`hover:bg-slate-50 print:hover:bg-transparent break-inside-avoid ${row.shiftType === 'OFF' ? 'print:hidden' : ''}`}>
-                            <td className="p-2 text-slate-800 font-bold border-l print:border-black text-center" dir="ltr">{row.date}</td>
-                            <td className={`p-2 font-bold border-l print:border-black text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-600 print:text-black' : 'text-slate-700 print:text-black'}`}>{row.dayName}</td>
-                            <td className="p-2 border-l print:border-black text-center">
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border inline-block w-full ${row.badgeColor} print:border-0 print:p-0 print:text-black print:bg-transparent`}>
-                                {row.shiftType === 'Day' ? 'روز' : 
-                                    row.shiftType === 'Night' ? 'شب' : 
-                                    row.shiftType === 'Normal' ? 'عادی' : 
-                                    row.shiftType === 'NormalLong' ? 'عادی(۱۱)' : 
-                                    row.shiftType === 'Rest' ? 'استراحت' : '-'}
-                                </span>
-                            </td>
-                            <td className="p-2 font-mono font-bold text-slate-700 border-l print:border-black text-center print:text-black" dir="ltr">
-                                {row.timeRange}
-                            </td>
-                            <td className={`p-2 font-medium border-l print:border-black ${row.statusClass || 'text-slate-600'} print:text-black truncate max-w-[150px]`}>
-                                {row.description}
-                            </td>
-                            <td className="p-2 text-slate-900 font-black text-center bg-slate-50/50 print:bg-transparent print:text-black">
-                                {row.hours > 0 ? row.hours : '-'}
-                            </td>
-                        </tr>
-                    ))
-                ) : (
-                    <tr>
-                        <td colSpan={6} className="p-6 text-center text-slate-400 font-bold">
-                            رکوردی یافت نشد.
+                {detailedStats.history.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50 print:hover:bg-transparent break-inside-avoid">
+                        <td className="p-2 text-slate-800 font-bold border-l print:border-black text-center" dir="ltr">{row.date}</td>
+                        <td className={`p-2 font-bold border-l print:border-black text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-600 print:text-black' : 'text-slate-700 print:text-black'}`}>{row.dayName}</td>
+                        <td className="p-2 border-l print:border-black">
+                             <div className="flex items-center gap-2">
+                                 <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
+                                 <span className="text-slate-600 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
+                             </div>
                         </td>
+                        
+                        {/* Values */}
+                        <td className="p-2 text-center border-l print:border-black font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent print:text-black">{row.mowazafi || '-'}</td>
+                        <td className="p-2 text-center border-l print:border-black font-bold text-indigo-700 bg-indigo-50/30 print:bg-transparent print:text-black">{row.nightFloat || '-'}</td>
+                        <td className="p-2 text-center border-l print:border-black font-bold text-blue-700 bg-blue-50/30 print:bg-transparent print:text-black">{row.normalOT || '-'}</td>
+                        <td className="p-2 text-center font-bold text-red-700 bg-red-50/30 print:bg-transparent print:text-black">{row.holidayOT || '-'}</td>
                     </tr>
-                )}
+                ))}
                 </tbody>
             </table>
           </div>
           
-          <div className="hidden print:block mt-6 pt-6 border-t-2 border-black break-inside-avoid px-8">
-              <div className="flex justify-between text-center text-xs font-bold">
+          <div className="hidden print:block mt-8 pt-8 border-t-2 border-black break-inside-avoid px-8">
+              <div className="flex justify-between text-center text-sm font-bold">
                   <div>امضاء سرپرست قسمت</div>
                   <div>امضاء امور اداری</div>
                   <div>امضاء پرسنل</div>
