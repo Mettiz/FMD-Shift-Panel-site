@@ -6,7 +6,7 @@ import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound } from 'lucide-react';
 
 const MONTHS = [
     { name: 'آذر', code: '09' },
@@ -26,7 +26,8 @@ const MONTHS = [
 const STORAGE_KEYS = {
   SCHEDULE: 'shiftflow_schedule_v2',
   PERSONNEL: 'shiftflow_personnel_v2',
-  LOCKED: 'shiftflow_locked_v2'
+  LOCKED: 'shiftflow_locked_v2',
+  PASSWORD: 'shiftflow_admin_password'
 };
 
 const App: React.FC = () => {
@@ -63,13 +64,24 @@ const App: React.FC = () => {
     }
   }); // Format: YYYY/MM
 
-  // --- SETTINGS LOCK STATE ---
+  // --- SETTINGS LOCK & PASSWORD STATE ---
+  const [adminPassword, setAdminPassword] = useState(() => {
+      return localStorage.getItem(STORAGE_KEYS.PASSWORD) || '1234';
+  });
   const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [settingsPassword, setSettingsPassword] = useState('');
 
+  // --- CHANGE PASSWORD MODAL STATE ---
+  const [isChangePwdOpen, setChangePwdOpen] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: '', new: '', confirm: '' });
+
+  // --- ADD PERSONNEL UI TOGGLE STATE ---
+  const [isAddingShiftPerson, setIsAddingShiftPerson] = useState(false);
+  const [isAddingSupervisor, setIsAddingSupervisor] = useState(false);
+
   const handleUnlockSettings = () => {
-    if (settingsPassword === '1234') {
+    if (settingsPassword === adminPassword) {
         setIsSettingsUnlocked(true);
         setSettingsPassword('');
         setIsPasswordModalOpen(false);
@@ -81,6 +93,27 @@ const App: React.FC = () => {
   const handleClosePasswordModal = () => {
       setIsPasswordModalOpen(false);
       setSettingsPassword('');
+  };
+
+  const handleChangePassword = () => {
+      if (pwdForm.current !== adminPassword) {
+          alert('رمز عبور فعلی اشتباه است.');
+          return;
+      }
+      if (pwdForm.new.length < 4) {
+          alert('رمز عبور باید حداقل ۴ کاراکتر باشد.');
+          return;
+      }
+      if (pwdForm.new !== pwdForm.confirm) {
+          alert('تکرار رمز عبور با رمز جدید مطابقت ندارد.');
+          return;
+      }
+
+      setAdminPassword(pwdForm.new);
+      localStorage.setItem(STORAGE_KEYS.PASSWORD, pwdForm.new);
+      alert('رمز عبور با موفقیت تغییر کرد.');
+      setChangePwdOpen(false);
+      setPwdForm({ current: '', new: '', confirm: '' });
   };
 
   // --- AUTO SAVE EFFECTS ---
@@ -156,6 +189,10 @@ const App: React.FC = () => {
       isActive: true
     }]);
     setNewPersonName('');
+    
+    // Close the add form
+    if (role === 'Shift') setIsAddingShiftPerson(false);
+    else setIsAddingSupervisor(false);
   };
 
   const handleRemovePersonnel = (name: string) => {
@@ -448,7 +485,7 @@ const App: React.FC = () => {
                  ></div>
              )}
 
-             {/* 2. PASSWORD MODAL */}
+             {/* 2. UNLOCK PASSWORD MODAL */}
              {isPasswordModalOpen && !isSettingsUnlocked && (
                  <div 
                     className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
@@ -469,7 +506,7 @@ const App: React.FC = () => {
                              <Lock size={24} />
                          </div>
                          <h3 className="font-bold text-slate-900 text-lg mb-2">بخش محافظت شده</h3>
-                         <p className="text-slate-600 text-sm mb-4 font-medium">لطفا رمز عبور را وارد کنید.</p>
+                         <p className="text-slate-800 text-sm mb-4 font-bold">لطفا رمز عبور را وارد کنید.</p>
                          
                          <div className="space-y-3">
                              <input 
@@ -500,10 +537,87 @@ const App: React.FC = () => {
                      </div>
                  </div>
              )}
+             
+             {/* 3. CHANGE PASSWORD MODAL */}
+             {isChangePwdOpen && (
+                 <div 
+                    className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    onClick={() => setChangePwdOpen(false)}
+                 >
+                     <div 
+                         className="bg-white p-6 rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm animate-in zoom-in-95 relative" 
+                         onClick={e => e.stopPropagation()}
+                     >
+                         <div className="flex justify-between items-center mb-4 border-b pb-3">
+                             <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                                 <KeyRound size={20} className="text-emerald-500" />
+                                 تغییر رمز عبور تنظیمات
+                             </h3>
+                             <button onClick={() => setChangePwdOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                         </div>
+                         
+                         <div className="space-y-3">
+                             <div>
+                                 <label className="text-xs font-bold text-slate-800 mb-1 block">رمز فعلی</label>
+                                 <input 
+                                    type="password"
+                                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none text-center dir-ltr text-slate-900 font-bold"
+                                    value={pwdForm.current}
+                                    onChange={e => setPwdForm({...pwdForm, current: e.target.value})}
+                                 />
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-800 mb-1 block">رمز جدید</label>
+                                 <input 
+                                    type="password"
+                                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none text-center dir-ltr text-slate-900 font-bold"
+                                    value={pwdForm.new}
+                                    onChange={e => setPwdForm({...pwdForm, new: e.target.value})}
+                                 />
+                             </div>
+                             <div>
+                                 <label className="text-xs font-bold text-slate-800 mb-1 block">تکرار رمز جدید</label>
+                                 <input 
+                                    type="password"
+                                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none text-center dir-ltr text-slate-900 font-bold"
+                                    value={pwdForm.confirm}
+                                    onChange={e => setPwdForm({...pwdForm, confirm: e.target.value})}
+                                 />
+                             </div>
 
-             {/* 3. Settings Content (Visible but covered by shield if locked) */}
+                             <div className="flex gap-2 mt-4 pt-2">
+                                 <button 
+                                    onClick={() => setChangePwdOpen(false)}
+                                    className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-bold transition"
+                                 >
+                                     انصراف
+                                 </button>
+                                 <button 
+                                    onClick={handleChangePassword}
+                                    className="flex-1 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-emerald-700 transition shadow-md"
+                                 >
+                                     تغییر رمز
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             )}
+
+             {/* 4. Settings Content (Visible but covered by shield if locked) */}
              <div className="max-w-4xl mx-auto space-y-8">
                 
+                {/* Header Actions */}
+                <div className="flex justify-end">
+                    <button 
+                        onClick={() => setChangePwdOpen(true)}
+                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition font-bold px-3 py-2 rounded-lg hover:bg-emerald-50"
+                    >
+                        <KeyRound size={16} />
+                        تغییر رمز عبور
+                    </button>
+                </div>
+
                 {/* 1. Experts Section */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
@@ -515,24 +629,42 @@ const App: React.FC = () => {
                     </div>
                     
                     <div className="p-6 space-y-6">
-                        {/* Add Form */}
-                        <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                placeholder="نام کارشناس جدید..." 
-                                className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none"
-                                value={newPersonName}
-                                onChange={(e) => setNewPersonName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
-                            />
-                            <button 
-                                onClick={() => handleAddPersonnel('Shift')}
-                                className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-                            >
-                                <Plus size={18} />
-                                افزودن
-                            </button>
-                        </div>
+                        {/* Toggle Add Form */}
+                        {!isAddingShiftPerson ? (
+                             <button 
+                                onClick={() => setIsAddingShiftPerson(true)}
+                                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition flex items-center justify-center gap-2"
+                             >
+                                <Plus size={20} />
+                                افزودن کارشناس جدید
+                             </button>
+                        ) : (
+                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
+                                <input 
+                                    autoFocus
+                                    type="text" 
+                                    placeholder="نام کارشناس جدید..." 
+                                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900"
+                                    value={newPersonName}
+                                    onChange={(e) => setNewPersonName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
+                                />
+                                <button 
+                                    onClick={() => { setIsAddingShiftPerson(false); setNewPersonName(''); }}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition"
+                                    title="انصراف"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleAddPersonnel('Shift')}
+                                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold"
+                                >
+                                    <Check size={18} />
+                                    تایید
+                                </button>
+                            </div>
+                        )}
 
                         {/* List */}
                         <div className="space-y-2">
@@ -590,24 +722,42 @@ const App: React.FC = () => {
                     </div>
                     
                     <div className="p-6 space-y-6">
-                        {/* Add Form */}
-                        <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                placeholder="نام سرپرست جدید..." 
-                                className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                                value={newPersonName}
-                                onChange={(e) => setNewPersonName(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
-                            />
-                            <button 
-                                onClick={() => handleAddPersonnel('Supervisor')}
-                                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-                            >
-                                <Plus size={18} />
-                                افزودن
-                            </button>
-                        </div>
+                        {/* Toggle Add Form */}
+                        {!isAddingSupervisor ? (
+                             <button 
+                                onClick={() => setIsAddingSupervisor(true)}
+                                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 transition flex items-center justify-center gap-2"
+                             >
+                                <Plus size={20} />
+                                افزودن سرپرست جدید
+                             </button>
+                        ) : (
+                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
+                                <input 
+                                    autoFocus
+                                    type="text" 
+                                    placeholder="نام سرپرست جدید..." 
+                                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
+                                    value={newPersonName}
+                                    onChange={(e) => setNewPersonName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
+                                />
+                                <button 
+                                    onClick={() => { setIsAddingSupervisor(false); setNewPersonName(''); }}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition"
+                                    title="انصراف"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleAddPersonnel('Supervisor')}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold"
+                                >
+                                    <Check size={18} />
+                                    تایید
+                                </button>
+                            </div>
+                        )}
 
                         {/* List */}
                         <div className="space-y-2">

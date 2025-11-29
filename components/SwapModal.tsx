@@ -48,10 +48,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-slate-800">درخواست جابجایی شیفت</h3>
+          <h3 className="text-lg font-bold text-slate-900">درخواست جابجایی شیفت</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X size={20} />
           </button>
@@ -59,16 +59,16 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">نوع شیفت من</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1">نوع شیفت من</label>
             <div className="flex bg-slate-100 p-1 rounded-lg">
               <button 
-                className={`flex-1 py-1 text-sm rounded-md transition ${selectedShift === 'Day' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                className={`flex-1 py-1 text-sm rounded-md transition font-bold ${selectedShift === 'Day' ? 'bg-white shadow text-slate-900' : 'text-slate-600 hover:text-slate-800'}`}
                 onClick={() => setSelectedShift('Day')}
               >
                 روز
               </button>
               <button 
-                className={`flex-1 py-1 text-sm rounded-md transition ${selectedShift === 'Night' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+                className={`flex-1 py-1 text-sm rounded-md transition font-bold ${selectedShift === 'Night' ? 'bg-white shadow text-slate-900' : 'text-slate-600 hover:text-slate-800'}`}
                 onClick={() => setSelectedShift('Night')}
               >
                 شب
@@ -77,9 +77,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">انتخاب تاریخ</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1">انتخاب تاریخ</label>
             <select 
-              className="w-full bg-white text-slate-900 border-slate-200 rounded-lg text-sm focus:ring-emerald-500"
+              className="w-full bg-white text-slate-900 font-medium border border-slate-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             >
@@ -91,9 +91,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">درخواست جابجایی با</label>
+            <label className="block text-sm font-bold text-slate-900 mb-1">درخواست جابجایی با</label>
             <select 
-              className="w-full bg-white text-slate-900 border-slate-200 rounded-lg text-sm focus:ring-emerald-500"
+              className="w-full bg-white text-slate-900 font-medium border border-slate-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none"
               value={targetPerson}
               onChange={(e) => setTargetPerson(e.target.value)}
             >
@@ -105,7 +105,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-start gap-2">
+            <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm flex items-start gap-2 font-medium">
               <AlertCircle size={16} className="mt-0.5 shrink-0" />
               {error}
             </div>
@@ -114,13 +114,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           <div className="flex gap-3 pt-4">
             <button 
               onClick={onClose}
-              className="flex-1 py-2 text-slate-600 bg-slate-100 rounded-lg text-sm font-medium hover:bg-slate-200"
+              className="flex-1 py-2 text-slate-700 bg-slate-100 rounded-lg text-sm font-bold hover:bg-slate-200"
             >
               انصراف
             </button>
             <button 
               onClick={handleSubmit}
-              className="flex-1 py-2 text-white bg-emerald-600 rounded-lg text-sm font-medium hover:bg-emerald-700 flex justify-center items-center gap-2"
+              className="flex-1 py-2 text-white bg-emerald-600 rounded-lg text-sm font-bold hover:bg-emerald-700 flex justify-center items-center gap-2 shadow-md"
             >
               <Check size={16} />
               ثبت درخواست

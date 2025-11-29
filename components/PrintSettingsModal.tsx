@@ -110,8 +110,8 @@ export const PrintSettingsModal: React.FC<PrintSettingsModalProps> = ({
                  {mode === 'CURRENT' && <div className="w-3 h-3 rounded-full bg-emerald-600" />}
               </div>
               <div className="flex-1">
-                 <span className={`block font-black text-lg ${mode === 'CURRENT' ? 'text-black' : 'text-slate-600'}`}>چاپ ماه جاری</span>
-                 <span className="text-sm text-slate-600 font-bold mt-1 block">{currentMonthLabel}</span>
+                 <span className={`block font-black text-lg ${mode === 'CURRENT' ? 'text-black' : 'text-slate-800'}`}>چاپ ماه جاری</span>
+                 <span className="text-sm text-slate-800 font-bold mt-1 block">{currentMonthLabel}</span>
               </div>
               <Calendar className={`${mode === 'CURRENT' ? 'text-emerald-600' : 'text-slate-300'}`} size={28} />
            </div>
@@ -126,7 +126,7 @@ export const PrintSettingsModal: React.FC<PrintSettingsModalProps> = ({
                     {mode === 'CUSTOM' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
                 </div>
                 <div className="flex-1">
-                    <span className={`block font-black text-lg ${mode === 'CUSTOM' ? 'text-black' : 'text-slate-600'}`}>بازه انتخابی (دستی)</span>
+                    <span className={`block font-black text-lg ${mode === 'CUSTOM' ? 'text-black' : 'text-slate-800'}`}>بازه انتخابی (دستی)</span>
                 </div>
                 <CalendarRange className={`${mode === 'CUSTOM' ? 'text-blue-600' : 'text-slate-300'}`} size={28} />
               </div>
@@ -170,7 +170,7 @@ export const PrintSettingsModal: React.FC<PrintSettingsModalProps> = ({
         <div className="bg-slate-50 px-6 py-4 border-t-2 border-slate-100 flex justify-end gap-3">
             <button 
                 onClick={onClose}
-                className="px-6 py-3 text-sm font-black text-slate-600 hover:text-black hover:bg-slate-200 rounded-lg transition"
+                className="px-6 py-3 text-sm font-black text-slate-700 hover:text-black hover:bg-slate-200 rounded-lg transition"
             >
                 انصراف
             </button>

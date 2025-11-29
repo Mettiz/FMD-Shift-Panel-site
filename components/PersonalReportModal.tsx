@@ -349,7 +349,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
             {/* Filters */}
             <div className="flex flex-col lg:flex-row items-center gap-2 bg-white p-2 rounded-lg border border-slate-200 text-xs">
-                <div className="flex items-center gap-1 font-bold whitespace-nowrap text-slate-500">
+                <div className="flex items-center gap-1 font-bold whitespace-nowrap text-slate-800">
                     <Filter size={14} />
                     فیلتر:
                 </div>
@@ -395,36 +395,36 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center print:grid-cols-4">
              {/* 1. Base Generated */}
              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:border-black">
-                 <div className="text-[10px] text-slate-500 font-bold mb-1 print:text-black">کارکرد موظفی (خام)</div>
-                 <div className="text-xl font-black text-slate-700 print:text-black">{detailedStats.totals.rawMowazafi}</div>
+                 <div className="text-[10px] text-slate-700 font-bold mb-1 print:text-black">کارکرد موظفی (خام)</div>
+                 <div className="text-xl font-black text-slate-900 print:text-black">{detailedStats.totals.rawMowazafi}</div>
              </div>
              {/* 2. Night Float */}
              <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 print:border-black print:bg-white">
-                 <div className="text-[10px] text-indigo-600 font-bold mb-1 print:text-black">ذخیره شب‌کاری (عادی)</div>
-                 <div className="text-xl font-black text-indigo-700 print:text-black">{detailedStats.totals.nightFloat}</div>
+                 <div className="text-[10px] text-indigo-800 font-bold mb-1 print:text-black">ذخیره شب‌کاری (عادی)</div>
+                 <div className="text-xl font-black text-indigo-900 print:text-black">{detailedStats.totals.nightFloat}</div>
                  {detailedStats.totals.deficit > 0 && (
-                     <div className="text-[9px] text-indigo-500 mt-1 print:text-black">
+                     <div className="text-[9px] text-indigo-700 mt-1 print:text-black">
                          {detailedStats.totals.convertedNight} ساعت جهت جبران کسر موظفی
                      </div>
                  )}
              </div>
              {/* 3. Normal OT */}
              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 print:border-black print:bg-white">
-                 <div className="text-[10px] text-blue-600 font-bold mb-1 print:text-black">اضافه کار عادی (نهایی)</div>
-                 <div className="text-xl font-black text-blue-700 print:text-black">{detailedStats.totals.finalNormalOT}</div>
-                 <div className="text-[9px] text-blue-400 mt-1 print:hidden">
+                 <div className="text-[10px] text-blue-800 font-bold mb-1 print:text-black">اضافه کار عادی (نهایی)</div>
+                 <div className="text-xl font-black text-blue-900 print:text-black">{detailedStats.totals.finalNormalOT}</div>
+                 <div className="text-[9px] text-blue-700 mt-1 print:hidden">
                     (مازاد شب + ۵شنبه + عصر)
                  </div>
              </div>
              {/* 4. Holiday OT */}
              <div className="bg-red-50 border border-red-100 rounded-lg p-3 print:border-black print:bg-white">
-                 <div className="text-[10px] text-red-600 font-bold mb-1 print:text-black">اضافه کار تعطیل (نهایی)</div>
-                 <div className="text-xl font-black text-red-700 print:text-black">{detailedStats.totals.finalHolidayOT}</div>
+                 <div className="text-[10px] text-red-800 font-bold mb-1 print:text-black">اضافه کار تعطیل (نهایی)</div>
+                 <div className="text-xl font-black text-red-900 print:text-black">{detailedStats.totals.finalHolidayOT}</div>
              </div>
           </div>
           
           {/* Calculation Hint */}
-          <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-800 print:border-black print:text-black print:bg-transparent">
+          <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-900 print:border-black print:text-black print:bg-transparent font-medium">
               <Calculator size={16} className="print:hidden mt-0.5 shrink-0" />
               <div className="leading-5">
                   <strong>فرمول محاسبه:</strong> موظفی پایه {detailedStats.totals.baseTarget} ساعت است. 
@@ -442,7 +442,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           </div>
 
           {/* Table */}
-          <h4 className="font-bold text-slate-800 mb-3 text-sm flex items-center gap-2 print:text-black">
+          <h4 className="font-bold text-slate-900 mb-3 text-sm flex items-center gap-2 print:text-black">
               <Clock size={16} className="text-emerald-600 print:hidden" />
               ریز کارکرد روزانه
           </h4>
@@ -450,33 +450,33 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
           <div className="overflow-x-auto border border-slate-200 rounded-lg print:border-black print:overflow-visible">
             <table className="w-full text-xs text-right border-collapse min-w-[600px]">
                 <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 print:bg-gray-200 print:border-black">
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-24">تاریخ</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16">روز</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center">وضعیت / شرح</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-emerald-50 print:bg-transparent">موظفی</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-indigo-50 print:bg-transparent">شب/شناور</th>
-                    <th className="p-2 font-bold text-slate-700 border-l print:border-black print:text-black text-center w-16 bg-blue-50 print:bg-transparent">عادی/۵شنبه</th>
-                    <th className="p-2 font-bold text-slate-700 text-center w-16 bg-red-50 print:bg-transparent print:text-black">تعطیل</th>
+                <tr className="bg-slate-100 border-b border-slate-200 print:bg-gray-200 print:border-black">
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-24">تاریخ</th>
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16">روز</th>
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center">وضعیت / شرح</th>
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
+                    <th className="p-2 font-bold text-slate-900 border-l print:border-black print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
+                    <th className="p-2 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
                 {detailedStats.history.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50 print:hover:bg-transparent break-inside-avoid">
-                        <td className="p-2 text-slate-800 font-bold border-l print:border-black text-center" dir="ltr">{row.date}</td>
-                        <td className={`p-2 font-bold border-l print:border-black text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-600 print:text-black' : 'text-slate-700 print:text-black'}`}>{row.dayName}</td>
+                        <td className="p-2 text-slate-900 font-bold border-l print:border-black text-center" dir="ltr">{row.date}</td>
+                        <td className={`p-2 font-bold border-l print:border-black text-center ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-700 print:text-black' : 'text-slate-900 print:text-black'}`}>{row.dayName}</td>
                         <td className="p-2 border-l print:border-black">
                              <div className="flex items-center gap-2">
                                  <span className={`w-2 h-2 rounded-full ${row.mowazafi > 0 ? 'bg-emerald-500' : (row.holidayOT > 0 ? 'bg-red-500' : 'bg-slate-300')} print:hidden`}></span>
-                                 <span className="text-slate-600 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
+                                 <span className="text-slate-900 font-medium print:text-black truncate max-w-[200px]">{row.desc}</span>
                              </div>
                         </td>
                         
                         {/* Values */}
-                        <td className="p-2 text-center border-l print:border-black font-bold text-emerald-700 bg-emerald-50/30 print:bg-transparent print:text-black">{row.mowazafi || '-'}</td>
-                        <td className="p-2 text-center border-l print:border-black font-bold text-indigo-700 bg-indigo-50/30 print:bg-transparent print:text-black">{row.nightFloat || '-'}</td>
-                        <td className="p-2 text-center border-l print:border-black font-bold text-blue-700 bg-blue-50/30 print:bg-transparent print:text-black">{row.normalOT || '-'}</td>
-                        <td className="p-2 text-center font-bold text-red-700 bg-red-50/30 print:bg-transparent print:text-black">{row.holidayOT || '-'}</td>
+                        <td className="p-2 text-center border-l print:border-black font-bold text-emerald-900 bg-emerald-50/50 print:bg-transparent print:text-black">{row.mowazafi || '-'}</td>
+                        <td className="p-2 text-center border-l print:border-black font-bold text-indigo-900 bg-indigo-50/50 print:bg-transparent print:text-black">{row.nightFloat || '-'}</td>
+                        <td className="p-2 text-center border-l print:border-black font-bold text-blue-900 bg-blue-50/50 print:bg-transparent print:text-black">{row.normalOT || '-'}</td>
+                        <td className="p-2 text-center font-bold text-red-900 bg-red-50/50 print:bg-transparent print:text-black">{row.holidayOT || '-'}</td>
                     </tr>
                 ))}
                 </tbody>
