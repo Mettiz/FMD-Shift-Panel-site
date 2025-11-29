@@ -27,6 +27,9 @@ const PERSIAN_MONTHS = [
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
+// Helper to convert digits to Persian
+const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
 // High contrast date select component
 const DateSelect = ({ value, onChange, options, label }: { value: string, onChange: (val: string) => void, options: any[], label: string }) => (
   <div className="flex-1 min-w-[70px]">
@@ -40,7 +43,7 @@ const DateSelect = ({ value, onChange, options, label }: { value: string, onChan
       >
         {options.map((o) => (
           <option key={o.value || o} value={o.value || o} className="text-black bg-white">
-            {o.label || o}
+            {toPersianDigits(o.label || o)}
           </option>
         ))}
       </select>
@@ -111,7 +114,7 @@ export const PrintSettingsModal: React.FC<PrintSettingsModalProps> = ({
               </div>
               <div className="flex-1">
                  <span className={`block font-black text-lg ${mode === 'CURRENT' ? 'text-black' : 'text-slate-800'}`}>چاپ ماه جاری</span>
-                 <span className="text-sm text-slate-800 font-bold mt-1 block">{currentMonthLabel}</span>
+                 <span className="text-sm text-slate-800 font-bold mt-1 block">{toPersianDigits(currentMonthLabel)}</span>
               </div>
               <Calendar className={`${mode === 'CURRENT' ? 'text-emerald-600' : 'text-slate-300'}`} size={28} />
            </div>
