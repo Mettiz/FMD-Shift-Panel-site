@@ -325,9 +325,9 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
       <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:overflow-visible print:shadow-none print:border-none print:w-full print:max-w-none print:h-auto print:bg-white print:static">
         
         {/* ======================= SCREEN VIEW ======================= */}
-        <div id="screen-view" className="flex flex-col h-full overflow-hidden print:hidden">
+        <div id="screen-view" className="flex flex-col flex-1 min-h-0 overflow-hidden print:hidden">
             
-            {/* Header */}
+            {/* Header (Fixed) */}
             <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 bg-slate-50">
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                     <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -375,8 +375,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 </div>
             </div>
 
-            {/* Content Body (Unified Scroll) */}
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white min-h-0 flex flex-col">
+            {/* Content Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white flex flex-col">
                 <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center shrink-0">
                     <div className="bg-slate-50 border border-slate-300 rounded-lg p-3">
                         <div className="text-[10px] text-slate-900 font-bold mb-1">کارکرد موظفی (خام)</div>
@@ -408,10 +408,10 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     </div>
                 </div>
 
-                {/* --- Screen View Table Restored & Optimized for Mobile --- */}
+                {/* --- Screen View Table --- */}
                 <div className="border border-slate-400 rounded-lg relative">
                     <table className="w-full table-fixed text-center text-[10px] sm:text-xs md:text-sm border-collapse">
-                        <thead className="bg-slate-800 text-white sticky top-0 z-10 shadow-md">
+                        <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
                             <tr>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[14%] sm:w-auto">تاریخ</th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">روز</th>
@@ -425,8 +425,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                                     <span className="hidden sm:inline">شب/شناور</span>
                                 </th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
-                                    <span className="sm:hidden">عادی</span>
-                                    <span className="hidden sm:inline">عادی/۵شنبه</span>
+                                    <span className="sm:hidden">روز</span>
+                                    <span className="hidden sm:inline">روز/۵شنبه</span>
                                 </th>
                                 <th className="p-1 sm:p-3 font-bold w-[12%] sm:w-auto">تعطیل</th>
                             </tr>
@@ -444,7 +444,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="sticky bottom-0 bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-400 shadow-inner text-[10px] sm:text-sm">
+                        <tfoot className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-400 shadow-inner text-[10px] sm:text-sm">
                              <tr>
                                  <td colSpan={3} className="p-2 sm:p-3 text-center border-l border-slate-400">مجموع کل</td>
                                  <td className="p-1 sm:p-3 border-l border-slate-400">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
