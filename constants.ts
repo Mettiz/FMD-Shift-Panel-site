@@ -6,7 +6,7 @@ export const OFFICIAL_HOLIDAYS = [
   '1404/01/02', // Nowruz
   '1404/01/03', // Nowruz
   '1404/01/04', // Nowruz
-  '1404/01/11', // Martyrdom of Imam Ali
+  '1404/01/11', // Martyrdom of Imam Ali (21 Ramadan 1446)
   '1404/01/12', // Islamic Republic Day
   '1404/01/13', // Nature Day
   '1404/02/04', // Martyrdom of Imam Ja'far Sadiq
@@ -19,14 +19,14 @@ export const OFFICIAL_HOLIDAYS = [
   '1404/05/23', // Arbaeen
   '1404/05/31', // Demise of Prophet & Imam Hassan
   '1404/06/02', // Martyrdom of Imam Reza
-  '1404/06/10', // Martyrdom of Imam Hassan Askari
+  '1404/06/10', // Martyrdom of Imam Hassan Askari / Eid-e-Zahra
   '1404/06/19', // Birthday of Prophet & Imam Sadiq
   '1404/09/03', // Martyrdom of Fatimah
   '1404/10/13', // Birthday of Imam Ali
   '1404/10/27', // Maba'ath
   '1404/11/15', // Birthday of Imam Mahdi
   '1404/11/22', // Revolution Day
-  '1404/12/20', // Martyrdom of Imam Ali (Ramadan)
+  '1404/12/20', // Martyrdom of Imam Ali (21 Ramadan 1447)
   '1404/12/29', // Nationalization of Oil Industry
 ];
 

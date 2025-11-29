@@ -456,7 +456,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </div>
 
                 <div className="flex flex-col items-end gap-1 text-right justify-self-end">
-                     <div className="flex items-center gap-1 text-xs font-bold bg-gray-50 rounded px-2 py-0.5">
+                     <div className="flex items-center gap-1 text-xs font-bold">
                         <span>بازه زمانی:</span>
                         <span dir="ltr">{getPrintDateRange()}</span>
                      </div>
