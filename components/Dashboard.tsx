@@ -25,29 +25,20 @@ const PERSIAN_MONTHS = [
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
-// Expanded Palette for unique colors per person (20 Distinct Colors)
-const CHART_COLORS = [
-  '#2563eb', // Blue 600
-  '#e11d48', // Rose 600
-  '#059669', // Emerald 600
-  '#d97706', // Amber 600
-  '#7c3aed', // Violet 600
-  '#0891b2', // Cyan 600
-  '#4f46e5', // Indigo 600
-  '#db2777', // Pink 600
-  '#65a30d', // Lime 600
-  '#ea580c', // Orange 600
-  '#0d9488', // Teal 600
-  '#9333ea', // Purple 600
-  '#be123c', // Rose 700
-  '#1d4ed8', // Blue 700
-  '#b45309', // Amber 700
-  '#0e7490', // Cyan 700
-  '#4338ca', // Indigo 700
-  '#15803d', // Green 700
-  '#a21caf', // Fuchsia 700
-  '#c2410c', // Orange 700
-];
+// Fixed Color Mapping per Person
+const GET_PERSON_COLOR = (name: string): string => {
+  if (name.includes('لسانی')) return '#2563eb';       // Blue
+  if (name.includes('سامان')) return '#059669';       // Green
+  if (name.includes('سلیمان')) return '#e11d48';      // Red (Soleiman Fallah)
+  if (name.includes('سالاروند')) return '#7c3aed';    // Purple
+  if (name.includes('دهقان')) return '#ea580c';       // Orange
+  
+  // Fallbacks for others (Supervisors/New staff)
+  if (name.includes('منصوری')) return '#0891b2';      // Cyan
+  if (name.includes('گودرزی')) return '#db2777';      // Pink
+  
+  return '#64748b'; // Default Slate
+};
 
 // Helper to convert digits to Persian
 const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
@@ -624,27 +615,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <h3 className="font-bold text-slate-800 text-sm lg:text-lg">نمودار توزیع کاری</h3>
                   <Scale size={16} className="text-slate-400" />
                </div>
-               <div className="h-[200px] sm:h-[300px] w-full relative">
+               <div className="h-[300px] w-full relative">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         activeIndex={activeIndex}
                         activeShape={renderActiveShape}
-                        data={chartData}
+                        data={chartData as any}
                         cx="50%"
                         cy="50%"
                         innerRadius="60%"
                         outerRadius="80%"
                         paddingAngle={2}
                         dataKey="totalHours"
+                        nameKey="name"
                         onClick={onPieClick}
                         onMouseEnter={onPieClick}
+                        // Explicitly casting these props to avoid TS error if types are outdated
+                        {...({ activeIndex, activeShape: renderActiveShape } as any)}
                       >
-                         <div style={{ width: '100%', height: '100%' }}></div>
                         {chartData.map((entry, index) => (
                           <Cell 
                               key={`cell-${index}`} 
-                              fill={CHART_COLORS[index % CHART_COLORS.length]} 
+                              fill={GET_PERSON_COLOR(entry.name)} 
                               strokeWidth={0}
                               style={{ outline: 'none' }}
                           />
@@ -654,31 +647,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         layout="horizontal" 
                         verticalAlign="bottom" 
                         align="center"
-                        iconType="circle"
-                        iconSize={6}
-                        onClick={(data: any, index: number) => {
-                             if (data && data.payload && data.payload.name) {
-                                 const idx = chartData.findIndex(d => d.name === data.payload.name);
-                                 if (idx !== -1) setActiveIndex(idx);
-                             }
-                        }}
-                        content={(props) => {
-                             const { payload } = props;
+                        content={() => {
                              return (
-                                 <ul className="flex flex-wrap justify-center gap-2 mt-2">
-                                     {payload?.map((entry: any, index: number) => {
-                                         const isActive = entry.value === chartData[activeIndex]?.name;
+                                 <ul className="flex flex-wrap justify-center gap-2 mt-4">
+                                     {chartData.map((entry, index) => {
+                                         const isActive = index === activeIndex;
+                                         const color = GET_PERSON_COLOR(entry.name);
+                                         
                                          return (
                                             <li 
-                                                key={`item-${index}`} 
-                                                className={`flex items-center gap-1 cursor-pointer transition ${isActive ? 'opacity-100 scale-105' : 'opacity-60 hover:opacity-100'}`}
-                                                onClick={() => {
-                                                    const idx = chartData.findIndex(d => d.name === entry.value);
-                                                    if (idx !== -1) setActiveIndex(idx);
+                                                key={`legend-item-${index}`} 
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
+                                                  isActive 
+                                                    ? 'bg-white shadow-md scale-105' 
+                                                    : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-50'
+                                                }`}
+                                                style={{
+                                                    borderColor: isActive ? color : 'transparent'
                                                 }}
+                                                onClick={() => setActiveIndex(index)}
                                             >
-                                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }}></span>
-                                                <span className={`text-[10px] text-slate-600 font-medium ${isActive ? 'font-bold text-slate-900' : ''}`}>{entry.value}</span>
+                                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }}></span>
+                                                <span 
+                                                    className={`text-xs ${isActive ? 'font-black' : 'font-medium text-slate-700'}`}
+                                                    style={{ color: isActive ? color : undefined }}
+                                                >
+                                                  {entry.name.replace('مهندس', '').trim()}
+                                                </span>
                                             </li>
                                          );
                                      })}
