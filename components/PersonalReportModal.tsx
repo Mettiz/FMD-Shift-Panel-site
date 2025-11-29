@@ -353,22 +353,22 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
             </div>
 
             {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white min-h-0">
                 <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                        <div className="text-[10px] text-slate-700 font-bold mb-1">کارکرد موظفی (خام)</div>
+                    <div className="bg-slate-50 border border-slate-300 rounded-lg p-3">
+                        <div className="text-[10px] text-slate-900 font-bold mb-1">کارکرد موظفی (خام)</div>
                         <div className="text-xl font-black text-slate-900">{detailedStats.totals.rawMowazafi}</div>
                     </div>
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-                        <div className="text-[10px] text-indigo-800 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                        <div className="text-[10px] text-indigo-900 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
                         <div className="text-xl font-black text-indigo-900">{detailedStats.totals.nightFloat}</div>
                     </div>
-                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
-                        <div className="text-[10px] text-blue-800 font-bold mb-1">اضافه کار عادی (نهایی)</div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="text-[10px] text-blue-900 font-bold mb-1">اضافه کار عادی (نهایی)</div>
                         <div className="text-xl font-black text-blue-900">{detailedStats.totals.finalNormalOT}</div>
                     </div>
-                    <div className="bg-red-50 border border-red-100 rounded-lg p-3">
-                        <div className="text-[10px] text-red-800 font-bold mb-1">اضافه کار تعطیل (نهایی)</div>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <div className="text-[10px] text-red-900 font-bold mb-1">اضافه کار تعطیل (نهایی)</div>
                         <div className="text-xl font-black text-red-900">{detailedStats.totals.finalHolidayOT}</div>
                     </div>
                 </div>
@@ -386,33 +386,34 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 </div>
 
                 {/* --- Screen View Table --- */}
-                <div className="rounded-lg border border-slate-200 overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-700">
+                <div className="rounded-lg border-2 border-slate-300 overflow-hidden shadow-sm">
+                    <div className="bg-slate-800 px-4 py-3 border-b border-slate-300 text-sm font-black text-white flex items-center gap-2">
+                        <FileDown size={16} className="text-emerald-400" />
                         ریز کارکرد روزانه (نمایش در صفحه)
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs text-center">
-                            <thead className="bg-slate-100 text-slate-700">
+                    <div className="overflow-x-auto max-h-[500px]">
+                        <table className="w-full text-xs text-center border-collapse">
+                            <thead className="bg-slate-800 text-white sticky top-0 z-10">
                                 <tr>
-                                    <th className="p-2 border-l border-slate-200">تاریخ</th>
-                                    <th className="p-2 border-l border-slate-200">روز</th>
-                                    <th className="p-2 text-right border-l border-slate-200">شرح</th>
-                                    <th className="p-2 border-l border-slate-200">موظفی</th>
-                                    <th className="p-2 border-l border-slate-200">شب/شناور</th>
-                                    <th className="p-2 border-l border-slate-200">عادی</th>
-                                    <th className="p-2">تعطیل</th>
+                                    <th className="p-3 border-l border-slate-600 font-bold">تاریخ</th>
+                                    <th className="p-3 border-l border-slate-600 font-bold">روز</th>
+                                    <th className="p-3 text-right border-l border-slate-600 font-bold">شرح</th>
+                                    <th className="p-3 border-l border-slate-600 font-bold">موظفی</th>
+                                    <th className="p-3 border-l border-slate-600 font-bold">شب/شناور</th>
+                                    <th className="p-3 border-l border-slate-600 font-bold">عادی</th>
+                                    <th className="p-3 font-bold">تعطیل</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {detailedStats.history.map(row => (
-                                    <tr key={row.id} className="hover:bg-slate-50">
-                                        <td className="p-2 border-l border-slate-100 dir-ltr">{toPersianDigits(row.date)}</td>
-                                        <td className={`p-2 border-l border-slate-100 ${row.dayName === 'جمعه' || row.isHoliday ? 'text-red-500 font-bold' : ''}`}>{row.dayName}</td>
-                                        <td className="p-2 text-right border-l border-slate-100 truncate max-w-[200px]">{row.desc}</td>
-                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.mowazafi || '-')}</td>
-                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.nightFloat || '-')}</td>
-                                        <td className="p-2 border-l border-slate-100 font-medium">{toPersianDigits(row.normalOT || '-')}</td>
-                                        <td className="p-2 font-medium">{toPersianDigits(row.holidayOT || '-')}</td>
+                            <tbody className="divide-y divide-slate-300 bg-white">
+                                {detailedStats.history.map((row, index) => (
+                                    <tr key={row.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-emerald-50 transition-colors`}>
+                                        <td className="p-3 border-l border-slate-300 dir-ltr text-slate-900 font-bold">{toPersianDigits(row.date)}</td>
+                                        <td className={`p-3 border-l border-slate-300 font-black ${row.dayName === 'جمعه' || row.isHoliday ? 'text-red-600' : 'text-slate-900'}`}>{row.dayName}</td>
+                                        <td className="p-3 text-right border-l border-slate-300 font-bold text-slate-800 truncate max-w-[200px]">{row.desc}</td>
+                                        <td className="p-3 border-l border-slate-300 font-bold text-slate-900">{toPersianDigits(row.mowazafi || '-')}</td>
+                                        <td className="p-3 border-l border-slate-300 font-bold text-slate-900">{toPersianDigits(row.nightFloat || '-')}</td>
+                                        <td className="p-3 border-l border-slate-300 font-bold text-slate-900">{toPersianDigits(row.normalOT || '-')}</td>
+                                        <td className="p-3 font-bold text-slate-900">{toPersianDigits(row.holidayOT || '-')}</td>
                                     </tr>
                                 ))}
                             </tbody>
