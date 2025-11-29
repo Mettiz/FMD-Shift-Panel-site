@@ -628,7 +628,7 @@ const App: React.FC = () => {
                         <span className="text-xs bg-white border px-2 py-1 rounded text-slate-500">کارشناس</span>
                     </div>
                     
-                    <div className="p-6 space-y-6">
+                    <div className="p-4 sm:p-6 space-y-6">
                         {/* Toggle Add Form */}
                         {!isAddingShiftPerson ? (
                              <button 
@@ -644,7 +644,7 @@ const App: React.FC = () => {
                                     autoFocus
                                     type="text" 
                                     placeholder="نام کارشناس جدید..." 
-                                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900"
+                                    className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900"
                                     value={newPersonName}
                                     onChange={(e) => setNewPersonName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
@@ -721,7 +721,7 @@ const App: React.FC = () => {
                         <span className="text-xs bg-white border px-2 py-1 rounded text-slate-500">سرپرست</span>
                     </div>
                     
-                    <div className="p-6 space-y-6">
+                    <div className="p-4 sm:p-6 space-y-6">
                         {/* Toggle Add Form */}
                         {!isAddingSupervisor ? (
                              <button 
@@ -737,7 +737,7 @@ const App: React.FC = () => {
                                     autoFocus
                                     type="text" 
                                     placeholder="نام سرپرست جدید..." 
-                                    className="flex-1 border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
+                                    className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
                                     value={newPersonName}
                                     onChange={(e) => setNewPersonName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
