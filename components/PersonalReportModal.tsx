@@ -330,10 +330,10 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
       
       {/* 
         Changes for Print Fix: 
-        print:fixed -> print:static or print:relative to avoid 100vh constraint 
-        print:overflow-visible to allow content to flow naturally
+        print:absolute print:inset-0 print:bg-white to cover dashboard background
+        print:h-auto print:min-h-0 to prevent double page
       */}
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:static print:h-auto print:w-full print:max-h-none print:max-w-none print:shadow-none print:overflow-visible print:bg-white">
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden print:absolute print:inset-0 print:h-auto print:min-h-0 print:w-full print:max-w-none print:shadow-none print:overflow-visible print:bg-white print:z-50">
         
         {/* Header (Screen Only) */}
         <div className="shrink-0 p-3 md:p-4 border-b border-slate-200 flex flex-col gap-3 print:hidden bg-slate-50">
@@ -389,10 +389,12 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
 
         {/* Print Header - Redesigned & Clean (No Borders) */}
         <div className="hidden print:flex w-full justify-between items-start mb-6 relative px-2 pt-2">
-             {/* Right: Name */}
-             <div className="flex flex-col items-start w-1/3">
-                 <div className="text-sm font-bold text-black">
-                    نام پرسنل: {selectedUser}
+             
+             {/* Right: Name (In Box) */}
+             <div className="flex flex-col items-start w-1/3 gap-1">
+                 <span className="text-xs font-bold text-black">نام پرسنل:</span>
+                 <div className="bg-gray-100 border border-black rounded-lg px-4 py-2 text-xl font-black text-black">
+                     {selectedUser}
                  </div>
              </div>
 
