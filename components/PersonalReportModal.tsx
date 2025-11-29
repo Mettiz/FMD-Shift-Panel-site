@@ -480,13 +480,13 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
             <table className="w-full text-xs text-right border-collapse min-w-[600px] print:text-[10pt]">
                 <thead>
                 <tr className="bg-slate-100 border-b border-slate-200 print:bg-gray-200 print:border-black">
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-24">تاریخ</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16">روز</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center">وضعیت / شرح</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
-                    <th className="p-2 print:p-1 font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center w-24">تاریخ</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16">روز</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center">وضعیت / شرح</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-emerald-100/50 print:bg-transparent">موظفی</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-indigo-100/50 print:bg-transparent">شب/شناور</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 border-l print:border-none print:text-black text-center w-16 bg-blue-100/50 print:bg-transparent">عادی/۵شنبه</th>
+                    <th className="p-2 print:py-3 print:text-lg font-bold text-slate-900 text-center w-16 bg-red-100/50 print:bg-transparent print:text-black">تعطیل</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-black">
