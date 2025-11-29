@@ -382,13 +382,13 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                         <div className="text-[10px] text-slate-900 font-bold mb-1">کارکرد موظفی (خام)</div>
                         <div className="text-xl font-black text-slate-900">{detailedStats.totals.rawMowazafi}</div>
                     </div>
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                        <div className="text-[10px] text-indigo-900 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
-                        <div className="text-xl font-black text-indigo-900">{detailedStats.totals.nightFloat}</div>
-                    </div>
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                         <div className="text-[10px] text-blue-900 font-bold mb-1">اضافه کار عادی (نهایی)</div>
                         <div className="text-xl font-black text-blue-900">{detailedStats.totals.finalNormalOT}</div>
+                    </div>
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                        <div className="text-[10px] text-indigo-900 font-bold mb-1">ذخیره شب‌کاری (عادی)</div>
+                        <div className="text-xl font-black text-indigo-900">{detailedStats.totals.nightFloat}</div>
                     </div>
                     <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                         <div className="text-[10px] text-red-900 font-bold mb-1">اضافه کار تعطیل (نهایی)</div>
@@ -411,22 +411,22 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                 {/* --- Screen View Table --- */}
                 <div className="border border-slate-400 rounded-lg relative">
                     <table className="w-full table-fixed text-center text-[10px] sm:text-xs md:text-sm border-collapse">
-                        <thead className="bg-slate-800 text-white sticky top-0 z-20 shadow-md">
+                        <thead className="bg-slate-800 text-white">
                             <tr>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[14%] sm:w-auto">تاریخ</th>
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[18%] sm:w-auto">تاریخ</th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">روز</th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[30%] sm:w-auto">
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[26%] sm:w-auto">
                                     <span className="sm:hidden">شرح</span>
                                     <span className="hidden sm:inline">وضعیت / شرح</span>
                                 </th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[10%] sm:w-auto">موظفی</th>
                                 <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
-                                    <span className="sm:hidden">شب</span>
-                                    <span className="hidden sm:inline">شب/شناور</span>
-                                </th>
-                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
                                     <span className="sm:hidden">روز</span>
                                     <span className="hidden sm:inline">روز/۵شنبه</span>
+                                </th>
+                                <th className="p-1 sm:p-3 font-bold border-l border-slate-600 w-[12%] sm:w-auto">
+                                    <span className="sm:hidden">شب</span>
+                                    <span className="hidden sm:inline">شب/شناور</span>
                                 </th>
                                 <th className="p-1 sm:p-3 font-bold w-[12%] sm:w-auto">تعطیل</th>
                             </tr>
@@ -438,8 +438,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                                     <td className={`p-1 sm:p-2 border-l border-slate-400 font-bold ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-600' : ''}`}>{row.dayName}</td>
                                     <td className="p-0.5 sm:p-2 border-l border-slate-400 text-right font-medium leading-tight whitespace-normal">{row.desc}</td>
                                     <td className="p-1 sm:p-2 border-l border-slate-400 font-bold">{toPersianDigits(row.mowazafi || '-')}</td>
-                                    <td className="p-1 sm:p-2 border-l border-slate-400 font-bold">{toPersianDigits(row.nightFloat || '-')}</td>
                                     <td className="p-1 sm:p-2 border-l border-slate-400 font-bold">{toPersianDigits(row.normalOT || '-')}</td>
+                                    <td className="p-1 sm:p-2 border-l border-slate-400 font-bold">{toPersianDigits(row.nightFloat || '-')}</td>
                                     <td className="p-1 sm:p-2 font-bold">{toPersianDigits(row.holidayOT || '-')}</td>
                                 </tr>
                             ))}
@@ -448,8 +448,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                              <tr>
                                  <td colSpan={3} className="p-2 sm:p-3 text-center border-l border-slate-400">مجموع کل</td>
                                  <td className="p-1 sm:p-3 border-l border-slate-400">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
-                                 <td className="p-1 sm:p-3 border-l border-slate-400">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
                                  <td className="p-1 sm:p-3 border-l border-slate-400">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                                 <td className="p-1 sm:p-3 border-l border-slate-400">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
                                  <td className="p-1 sm:p-3">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
                              </tr>
                         </tfoot>
@@ -501,8 +501,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                         <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">روز</th>
                         <th className="py-2 px-1 text-lg font-bold text-center border-x border-black">وضعیت / شرح</th>
                         <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">موظفی</th>
-                        <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">شب/شناور</th>
                         <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">عادی/۵شنبه</th>
+                        <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">شب/شناور</th>
                         <th className="py-2 px-1 text-lg font-bold text-center border-x border-black w-20">تعطیل</th>
                     </tr>
                 </thead>
@@ -513,8 +513,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                              <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{row.dayName}</td>
                              <td className="p-1 text-right text-[9pt] font-medium border-x border-black">{row.desc}</td>
                              <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{toPersianDigits(row.mowazafi || '-')}</td>
-                             <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{toPersianDigits(row.nightFloat || '-')}</td>
                              <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{toPersianDigits(row.normalOT || '-')}</td>
+                             <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{toPersianDigits(row.nightFloat || '-')}</td>
                              <td className="p-1 text-center text-[9pt] font-bold border-x border-black">{toPersianDigits(row.holidayOT || '-')}</td>
                         </tr>
                     ))}
@@ -523,8 +523,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                      <tr className="bg-gray-300 text-black font-black border-y-2 border-black">
                          <td colSpan={3} className="py-2 px-1 text-center text-lg border-x border-black">مجموع کل</td>
                          <td className="py-2 px-1 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
-                         <td className="py-2 px-1 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
                          <td className="py-2 px-1 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                         <td className="py-2 px-1 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
                          <td className="py-2 px-1 text-center text-lg border-x border-black">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
                      </tr>
                 </tfoot>
