@@ -12,7 +12,9 @@
     "react": "^19.2.0",
     "lucide-react": "^0.554.0",
     "recharts": "^3.5.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "xlsx": "latest",
+    "pdfjs-dist": "3.11.174"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
