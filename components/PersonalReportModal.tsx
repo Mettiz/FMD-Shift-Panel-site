@@ -364,8 +364,8 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
             </div>
 
             {/* Content Body */}
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white min-h-0">
-                <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-white min-h-0 flex flex-col">
+                <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-3 text-center shrink-0">
                     <div className="bg-slate-50 border border-slate-300 rounded-lg p-3">
                         <div className="text-[10px] text-slate-900 font-bold mb-1">کارکرد موظفی (خام)</div>
                         <div className="text-xl font-black text-slate-900">{detailedStats.totals.rawMowazafi}</div>
@@ -384,7 +384,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     </div>
                 </div>
                 
-                <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-900 font-medium">
+                <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-200 flex items-start gap-2 text-xs text-amber-900 font-medium shrink-0">
                     <Calculator size={16} className="mt-0.5 shrink-0" />
                     <div className="leading-5">
                         <strong>فرمول محاسبه:</strong> موظفی پایه {detailedStats.totals.baseTarget} ساعت است. 
@@ -396,9 +396,43 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                     </div>
                 </div>
 
-                {/* --- Screen View Table REMOVED --- */}
-                <div className="p-4 text-center text-slate-500 text-sm font-medium border-2 border-dashed border-slate-200 rounded-lg">
-                    جدول ریز کارکرد جهت چاپ آماده است. دکمه چاپ را بزنید.
+                {/* --- Screen View Table Restored --- */}
+                <div className="flex-1 overflow-auto border border-slate-300 rounded-lg relative min-h-0">
+                    <table className="w-full text-center text-xs md:text-sm border-collapse">
+                        <thead className="bg-slate-800 text-white sticky top-0 z-10 shadow-md">
+                            <tr>
+                                <th className="p-3 font-bold border-l border-slate-600">تاریخ</th>
+                                <th className="p-3 font-bold border-l border-slate-600">روز</th>
+                                <th className="p-3 font-bold border-l border-slate-600 w-1/3">وضعیت / شرح</th>
+                                <th className="p-3 font-bold border-l border-slate-600">موظفی</th>
+                                <th className="p-3 font-bold border-l border-slate-600">شب/شناور</th>
+                                <th className="p-3 font-bold border-l border-slate-600">عادی/۵شنبه</th>
+                                <th className="p-3 font-bold">تعطیل</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-300 bg-white">
+                            {detailedStats.history.map((row, idx) => (
+                                <tr key={row.id} className={`${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'} hover:bg-emerald-50 transition-colors text-slate-900`}>
+                                    <td className="p-2 border-l border-slate-200 font-bold" dir="ltr">{toPersianDigits(row.date)}</td>
+                                    <td className={`p-2 border-l border-slate-200 font-bold ${row.isHoliday || row.dayName === 'جمعه' ? 'text-red-600' : ''}`}>{row.dayName}</td>
+                                    <td className="p-2 border-l border-slate-200 text-right font-medium">{row.desc}</td>
+                                    <td className="p-2 border-l border-slate-200 font-bold">{toPersianDigits(row.mowazafi || '-')}</td>
+                                    <td className="p-2 border-l border-slate-200 font-bold">{toPersianDigits(row.nightFloat || '-')}</td>
+                                    <td className="p-2 border-l border-slate-200 font-bold">{toPersianDigits(row.normalOT || '-')}</td>
+                                    <td className="p-2 font-bold">{toPersianDigits(row.holidayOT || '-')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="sticky bottom-0 bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-400 shadow-inner">
+                             <tr>
+                                 <td colSpan={3} className="p-3 text-center border-l border-slate-300">مجموع کل</td>
+                                 <td className="p-3 border-l border-slate-300">{toPersianDigits(detailedStats.totals.rawMowazafi)}</td>
+                                 <td className="p-3 border-l border-slate-300">{toPersianDigits(detailedStats.totals.nightFloat)}</td>
+                                 <td className="p-3 border-l border-slate-300">{toPersianDigits(detailedStats.totals.finalNormalOT)}</td>
+                                 <td className="p-3">{toPersianDigits(detailedStats.totals.finalHolidayOT)}</td>
+                             </tr>
+                        </tfoot>
+                    </table>
                 </div>
 
             </div>
