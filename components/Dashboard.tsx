@@ -239,12 +239,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [stats]);
 
   // Chart Data - Sorted by Total Hours
+  // Sync chartData with legend order strictly by sorting logic
   const chartData = useMemo(() => {
     return stats
       .filter(s => s.totalHours > 0)
       .sort((a, b) => b.totalHours - a.totalHours);
   }, [stats]);
 
+  // Sync Legend Clicks with Chart Active Index
   const onPieClick = (_: any, index: number) => {
     setActiveIndex(index);
   };
@@ -295,54 +297,57 @@ export const Dashboard: React.FC<DashboardProps> = ({
          </div>
 
          {/* Toolbar: Actions & Filters */}
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {/* Left: Actions */}
-             <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-                <button 
-                  onClick={onRegenerate}
-                  className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap"
-                  title="چیدمان مجدد هوشمند"
-                >
-                   <RefreshCw size={16} />
-                   <span className="hidden lg:inline">چیدمان خودکار</span>
-                </button>
+         <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+            {/* 1. Update (Regenerate) */}
+            <button 
+              onClick={onRegenerate}
+              className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap"
+              title="چیدمان مجدد هوشمند"
+            >
+               <RefreshCw size={16} />
+               <span className="hidden md:inline">آپدیت</span>
+            </button>
 
-                <button 
-                  onClick={onToggleLock}
-                  className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-600'}`}
-                >
-                   {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-                   <span className="hidden lg:inline">{isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}</span>
-                </button>
-                
-                <button 
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition shadow-sm whitespace-nowrap mr-auto md:mr-0"
-                >
-                   <Printer size={16} />
-                   <span className="hidden lg:inline">چاپ برنامه</span>
-                </button>
-                 
-                <button 
-                  onClick={onOpenReport}
-                  className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-sm whitespace-nowrap"
-                >
-                   <FileText size={16} />
-                   <span className="hidden lg:inline">گزارش فردی</span>
-                </button>
-             </div>
+            {/* 2. Lock */}
+            <button 
+              onClick={onToggleLock}
+              className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-600'}`}
+              title={isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}
+            >
+               {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+               <span className="hidden md:inline">{isLocked ? 'قفل' : 'باز'}</span>
+            </button>
 
-             {/* Right: Advanced Filter Toggle */}
-             <div className="flex justify-end">
-                <button 
-                   onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border ${isFiltersOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}
-                >
-                   <Filter size={16} />
-                   <span className="hidden lg:inline">فیلترهای پیشرفته</span>
-                   {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-             </div>
+            {/* 3. Advanced Filter */}
+            <button 
+               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border ${isFiltersOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}
+               title="فیلترهای پیشرفته"
+            >
+               <Filter size={16} />
+               <span className="hidden md:inline">فیلتر پیشرفته</span>
+               {isFiltersOpen ? <ChevronUp size={14} className="hidden md:inline" /> : <ChevronDown size={14} className="hidden md:inline" />}
+            </button>
+
+            {/* 4. Personal Report */}
+            <button 
+              onClick={onOpenReport}
+              className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-700 transition shadow-sm whitespace-nowrap"
+              title="گزارش فردی"
+            >
+               <FileText size={16} />
+               <span className="hidden md:inline">کارکرد پرسنل</span>
+            </button>
+            
+            {/* 5. Print */}
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition shadow-sm whitespace-nowrap"
+              title="چاپ برنامه"
+            >
+               <Printer size={16} />
+               <span className="hidden md:inline">پرینت</span>
+            </button>
          </div>
 
          {/* Advanced Filters Panel */}
