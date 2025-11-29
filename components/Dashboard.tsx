@@ -574,17 +574,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
                        {entry.isHoliday && <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">تعطیل</span>}
                     </div>
                     
-                    <div className="space-y-2">
-                       <div className="flex items-center gap-2">
-                          <Sun size={16} className="text-orange-400" />
-                          <span className="text-xs font-bold w-12 text-slate-500">روز:</span>
-                          <span className="flex-1 font-bold text-slate-800 text-sm">{entry.dayShiftPerson}</span>
+                    <div className="space-y-3">
+                       {/* Day Shift */}
+                       <div className="flex items-start gap-2">
+                          <Sun size={16} className="text-orange-400 mt-0.5" />
+                          <span className="text-xs font-bold w-12 text-slate-500 mt-0.5">روز:</span>
+                          <div className="flex-1 flex flex-col">
+                              <span className="font-bold text-slate-800 text-sm">{entry.dayShiftPerson}</span>
+                              {entry.originalDayShiftPerson && entry.originalDayShiftPerson !== entry.dayShiftPerson && (
+                                  <span className="text-[10px] text-red-400 line-through decoration-red-300">
+                                      {entry.originalDayShiftPerson}
+                                  </span>
+                              )}
+                          </div>
                        </div>
-                       <div className="flex items-center gap-2">
-                          <Moon size={16} className="text-indigo-400" />
-                          <span className="text-xs font-bold w-12 text-slate-500">شب:</span>
-                          <span className="flex-1 font-bold text-slate-800 text-sm">{entry.nightShiftPerson}</span>
+                       
+                       {/* Night Shift */}
+                       <div className="flex items-start gap-2">
+                          <Moon size={16} className="text-indigo-400 mt-0.5" />
+                          <span className="text-xs font-bold w-12 text-slate-500 mt-0.5">شب:</span>
+                          <div className="flex-1 flex flex-col">
+                              <span className="font-bold text-slate-800 text-sm">{entry.nightShiftPerson}</span>
+                              {entry.originalNightShiftPerson && entry.originalNightShiftPerson !== entry.nightShiftPerson && (
+                                  <span className="text-[10px] text-red-400 line-through decoration-red-300">
+                                      {entry.originalNightShiftPerson}
+                                  </span>
+                              )}
+                          </div>
                        </div>
+
+                       {/* Supervisor */}
                        <div className="flex items-center gap-2">
                           <CheckCircle2 size={16} className="text-emerald-400" />
                           <span className="text-xs font-bold w-12 text-slate-500">سرپرست:</span>
