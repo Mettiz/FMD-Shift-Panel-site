@@ -26,7 +26,7 @@
       @media print {
         @page {
           size: A4 portrait;
-          margin: 5mm; /* Very small margins to hide browser headers */
+          margin: 6mm; /* Clean margins to maximize printable space while preventing clipping */
         }
 
         html, body {
@@ -56,34 +56,19 @@
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+            max-width: 100% !important;
         }
 
-        body:not(.print-mode-modal).print-mode-dashboard .dashboard-container {
+        body:not(.print-mode-modal) .dashboard-container {
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
         }
 
-        /* Force table to fit width and look clean */
-        body:not(.print-mode-modal).print-mode-dashboard table {
-             width: 100% !important;
-             font-size: 8pt !important; /* Smaller font to fit 31 rows */
-             border-collapse: collapse !important;
-             table-layout: fixed !important;
-        }
-        
-        body:not(.print-mode-modal).print-mode-dashboard th,
-        body:not(.print-mode-modal).print-mode-dashboard td {
-             padding: 1px 2px !important; /* Very Compact padding */
-             border: 1px solid #000 !important;
-             height: auto !important;
-        }
-        
-        body:not(.print-mode-modal).print-mode-dashboard .user-card-print {
-            display: flex !important;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
+        /* Ensure table rows do not break mid-row across pages */
+        tr {
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
         }
 
         /* --- MODAL REPORT MODE --- */
@@ -119,17 +104,6 @@
         table {
           width: 100% !important;
           border-collapse: collapse !important;
-        }
-        
-        th, td {
-          border: 1px solid #000 !important;
-          color: black !important;
-        }
-        
-        thead th {
-            background-color: #f0f0f0 !important;
-            border-bottom: 2px solid #000 !important;
-            color: black !important;
         }
       }
     </style>

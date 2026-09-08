@@ -391,7 +391,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
   
   const handlePrint = () => {
-      window.print();
+    document.body.classList.remove('print-mode-modal');
+    document.body.classList.add('print-mode-dashboard');
+    window.print();
   };
 
   const getPrintDateRange = () => {
@@ -832,40 +834,292 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 print:block print:w-full">
         
         {/* Left: Schedule Table */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6 print:col-span-full print:w-full print:space-y-0">
             
-            {/* Print Header */}
-            <div className="hidden print:grid grid-cols-3 items-center mb-2 p-3">
-                <div className="flex flex-col items-start gap-1 justify-self-start">
-                    <h1 className="text-lg font-black text-black">برنامه شیفت</h1>
-                    <span className="text-sm font-bold text-black">واحد تولید FMD</span>
+            {/* --- DEDICATED EXECUTIVE PRINT VIEW --- */}
+            <div className="hidden print:block w-full text-slate-900 font-sans" id="dashboard-print-view">
+                
+                {/* 1. Official Header Frame */}
+                <div className="border-2 border-slate-800 rounded-xl p-3 bg-white mb-2 shadow-2xs">
+                    <div className="grid grid-cols-3 items-center gap-2">
+                        {/* Right: Organization & Department */}
+                        <div className="flex flex-col items-start text-right">
+                            <div className="flex items-center gap-2.5 mb-1">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm tracking-wider shadow-xs shrink-0" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                                    FMD
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-900 leading-tight">سامانه مدیریت شیفت تولید</h2>
+                                    <p className="text-[9.5pt] font-extrabold text-slate-700 leading-tight">مرکز مدیریت و هماهنگی عملیات</p>
+                                </div>
+                            </div>
+                            <p className="text-[8.5pt] font-bold text-slate-600">واحد تولید و پایش ۲۴/۷ سامانه‌ها</p>
+                            <span className="text-[7.5pt] font-semibold text-slate-500 mt-0.5">اداره پایش نوبت‌کاری پرسنل</span>
+                        </div>
+
+                        {/* Center: Main Document Title & Period */}
+                        <div className="flex flex-col items-center justify-center text-center">
+                            <div className="inline-block bg-slate-900 text-white px-3 py-0.5 rounded-full text-[8.5pt] font-black tracking-wide mb-1">
+                                جدول زمان‌بندی و برنامه شیفت کاری
+                            </div>
+                            <h1 className="text-xl font-black text-slate-900">
+                                {viewMode === 'RANGE' && appliedFilter 
+                                   ? `بازه ${toPersianDigits(appliedFilter.from.year)}/${toPersianDigits(appliedFilter.from.month)}/${toPersianDigits(appliedFilter.from.day)} تا ${toPersianDigits(appliedFilter.to.year)}/${toPersianDigits(appliedFilter.to.month)}/${toPersianDigits(appliedFilter.to.day)}`
+                                   : `${monthName} ماه ${toPersianDigits(year)}`
+                                }
+                            </h1>
+                            <div className="flex items-center gap-1.5 text-[8pt] font-bold text-slate-600 mt-0.5">
+                                <span>پوشش نوبت‌کاری:</span>
+                                <span>روز (۱۹ - ۰۸) | شب (۰۸ - ۱۹) | سرپرست On-Call</span>
+                            </div>
+                        </div>
+
+                        {/* Left: Administrative Metadata */}
+                        <div className="flex flex-col items-end text-left space-y-0.5 text-[8pt]">
+                            <div className="bg-slate-100 border border-slate-300 rounded px-2 py-0.5 text-[7.5pt] font-black text-slate-800">
+                                کد سند: DOC-FMD-ROSTER
+                            </div>
+                            <div className="text-slate-800 font-bold">
+                                تاریخ چاپ: <span className="font-black">{toPersianDigits(new Date().toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran' }))}</span>
+                            </div>
+                            <div className="text-slate-600 font-bold">
+                                زمان چاپ: <span className="font-black">{toPersianDigits(new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tehran' }))}</span>
+                            </div>
+                            <div className="text-slate-700 font-bold">
+                                بازه زمانی: <span dir="ltr" className="font-black">{getPrintDateRange()}</span>
+                            </div>
+                            <div className="text-emerald-800 font-black text-[7.5pt]">
+                                وضعیت: نسخه رسمی و مصوب
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex items-center justify-center justify-self-center">
-                    <h2 className="text-2xl font-black text-black">{monthName} {toPersianDigits(year)}</h2>
+                {/* 2. Key Metrics & Legend Ribbon */}
+                <div className="flex items-center justify-between bg-slate-100 border border-slate-300 rounded-lg px-3 py-1.5 mb-2 text-[8pt]">
+                    {/* Summary Badges */}
+                    <div className="flex items-center gap-3 font-bold text-slate-800">
+                        <div className="flex items-center gap-1">
+                            <span className="text-slate-500">کل روزهای دوره:</span>
+                            <span className="font-black bg-white px-1.5 py-0.5 rounded border border-slate-300">{toPersianDigits(filteredSchedule.length)} روز</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-slate-500">روزهای عادی کاری:</span>
+                            <span className="font-black bg-white px-1.5 py-0.5 rounded border border-slate-300 text-slate-900">{toPersianDigits(filteredSchedule.filter(s => !s.isHoliday && s.dayName !== 'جمعه').length)} روز</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-slate-500">تعطیل رسمی و جمعه:</span>
+                            <span className="font-black bg-white px-1.5 py-0.5 rounded border border-slate-300 text-red-600">{toPersianDigits(filteredSchedule.filter(s => s.isHoliday || s.dayName === 'جمعه').length)} روز</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span className="text-slate-500">پرسنل شیفت:</span>
+                            <span className="font-black bg-white px-1.5 py-0.5 rounded border border-slate-300">{toPersianDigits(shiftWorkers.length)} نفر</span>
+                        </div>
+                    </div>
+
+                    {/* Shift Legend */}
+                    <div className="flex items-center gap-3 text-[7.5pt] font-black text-slate-700">
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-600"></span>
+                            <span>شیفت روز: ۰۸:۰۰ الی ۱۹:۰۰</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                            <span>شیفت شب: ۱۹:۰۰ الی ۰۸:۰۰</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                            <span>سرپرست: ۲۴ ساعته</span>
+                        </span>
+                    </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1 text-right justify-self-end">
-                     <div className="flex items-center gap-1 text-xs font-bold">
-                        <span>بازه زمانی:</span>
-                        <span dir="ltr">{getPrintDateRange()}</span>
-                     </div>
-                     <div className="text-[10px] font-bold text-black">
-                        تعداد پرسنل: {toPersianDigits(shiftWorkers.length)} نفر
-                     </div>
-                     <span className="text-[10px] font-bold text-black">
-                        تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran' }))}
-                     </span>
+                {/* 3. The Beautified Print Table */}
+                <table className="w-full text-center border-collapse border-2 border-slate-800 text-[8.5pt]" style={{ tableLayout: 'fixed' }}>
+                    <colgroup>
+                        <col style={{ width: '5%' }} />
+                        <col style={{ width: '10%' }} />
+                        <col style={{ width: '13%' }} />
+                        <col style={{ width: '9%' }} />
+                        <col style={{ width: '22%' }} />
+                        <col style={{ width: '22%' }} />
+                        <col style={{ width: '19%' }} />
+                    </colgroup>
+                    <thead>
+                        <tr className="bg-slate-800 text-white font-black">
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">ردیف</th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">روز</th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">تاریخ</th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">نوع روز</th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">
+                                شیفت روز (۱۹ - ۰۸)
+                            </th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">
+                                شیفت شب (۰۸ - ۱۹)
+                            </th>
+                            <th className="border border-slate-700 py-1.5 px-1 text-center">
+                                سرپرست (On-Call)
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300">
+                        {filteredSchedule.map((entry, index) => {
+                            const isFriday = entry.dayName === 'جمعه';
+                            const isHoliday = entry.isHoliday;
+                            const isThursday = entry.dayName === 'پنج‌شنبه';
+
+                            let rowBg = index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70';
+                            if (isFriday || isHoliday) {
+                                rowBg = 'bg-red-50/80 text-red-950 font-semibold';
+                            } else if (isThursday) {
+                                rowBg = 'bg-purple-50/50';
+                            }
+
+                            const isDaySwapped = entry.originalDayShiftPerson && entry.originalDayShiftPerson !== entry.dayShiftPerson;
+                            const isNightSwapped = entry.originalNightShiftPerson && entry.originalNightShiftPerson !== entry.nightShiftPerson;
+
+                            return (
+                                <tr key={`print-row-${entry.id}`} className={rowBg} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                                    {/* Row Number */}
+                                    <td className="border border-slate-400 py-1 px-1 text-center font-bold text-slate-700">
+                                        {toPersianDigits(index + 1)}
+                                    </td>
+
+                                    {/* Day Name */}
+                                    <td className={`border border-slate-400 py-1 px-1 text-center font-black ${isFriday || isHoliday ? 'text-red-700' : isThursday ? 'text-purple-800' : 'text-slate-800'}`}>
+                                        {entry.dayName}
+                                    </td>
+
+                                    {/* Persian Date */}
+                                    <td className="border border-slate-400 py-1 px-1 text-center font-bold text-slate-800 dir-ltr">
+                                        {toPersianDigits(entry.date)}
+                                    </td>
+
+                                    {/* Day Status */}
+                                    <td className="border border-slate-400 py-1 px-1 text-center">
+                                        {isHoliday ? (
+                                            <span className="inline-block bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded text-[7pt] font-black">
+                                                تعطیل رسمی
+                                            </span>
+                                        ) : isFriday ? (
+                                            <span className="inline-block bg-red-100 text-red-700 border border-red-300 px-1 py-0.5 rounded text-[7pt] font-black">
+                                                جمعه
+                                            </span>
+                                        ) : isThursday ? (
+                                            <span className="inline-block bg-purple-100 text-purple-700 border border-purple-200 px-1 py-0.5 rounded text-[7pt] font-bold">
+                                                پنج‌شنبه
+                                            </span>
+                                        ) : (
+                                            <span className="text-[7.5pt] font-medium text-slate-600">
+                                                عادی
+                                            </span>
+                                        )}
+                                    </td>
+
+                                    {/* Day Shift */}
+                                    <td className="border border-slate-400 py-1 px-1.5 text-center">
+                                        <div className="flex flex-col items-center justify-center leading-tight">
+                                            <span className="font-black text-[9pt] text-slate-900">
+                                                {entry.dayShiftPerson}
+                                            </span>
+                                            {isDaySwapped && (
+                                                <span className="text-[6.5pt] text-amber-900 font-bold bg-amber-50 px-1 rounded border border-amber-200 mt-0.5">
+                                                    (جابجایی با {entry.originalDayShiftPerson})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+
+                                    {/* Night Shift */}
+                                    <td className="border border-slate-400 py-1 px-1.5 text-center">
+                                        <div className="flex flex-col items-center justify-center leading-tight">
+                                            <span className="font-black text-[9pt] text-slate-900">
+                                                {entry.nightShiftPerson}
+                                            </span>
+                                            {isNightSwapped && (
+                                                <span className="text-[6.5pt] text-amber-900 font-bold bg-amber-50 px-1 rounded border border-amber-200 mt-0.5">
+                                                    (جابجایی با {entry.originalNightShiftPerson})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+
+                                    {/* Supervisor */}
+                                    <td className="border border-slate-400 py-1 px-1.5 text-center">
+                                        <span className="font-extrabold text-[8.5pt] text-slate-800">
+                                            {entry.onCallPerson}
+                                        </span>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+
+                {/* 4. Signatures & Official Approvals Box */}
+                <div className="mt-2.5 border-2 border-slate-800 rounded-xl p-2.5 bg-white" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                    <div className="text-[8pt] font-black text-slate-700 mb-1.5 border-b border-slate-200 pb-1 flex items-center justify-between">
+                        <span>گردش کار اداری و تأییدیه‌های سازمانی:</span>
+                        <span className="text-[7pt] text-slate-500 font-normal">این سند بدون امضای سه‌گانه فاقد اعتبار اجرایی است.</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                        {/* 1. Planner */}
+                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
+                            <div>
+                                <span className="text-[8pt] font-black text-slate-800 block">تنظیم‌کننده برنامه</span>
+                                <span className="text-[7pt] text-slate-500">کارشناس برنامه‌ریزی شیفت</span>
+                            </div>
+                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
+                                <span>امضا: ....................</span>
+                                <span>تاریخ: ...../...../.....</span>
+                            </div>
+                        </div>
+
+                        {/* 2. Shift Supervisor */}
+                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
+                            <div>
+                                <span className="text-[8pt] font-black text-slate-800 block">بررسی و هماهنگی</span>
+                                <span className="text-[7pt] text-slate-500">سرپرست مرکز عملیات شیفت</span>
+                            </div>
+                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
+                                <span>امضا: ....................</span>
+                                <span>تاریخ: ...../...../.....</span>
+                            </div>
+                        </div>
+
+                        {/* 3. Division Manager */}
+                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
+                            <div>
+                                <span className="text-[8pt] font-black text-slate-800 block">تأیید نهایی و ابلاغ</span>
+                                <span className="text-[7pt] text-slate-500">مدیر واحد تولید و عملیات</span>
+                            </div>
+                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
+                                <span>امضا: ....................</span>
+                                <span>تاریخ: ...../...../.....</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5. Official Footer Legal Note */}
+                <div className="mt-1.5 flex items-center justify-between text-[7pt] font-medium text-slate-500 px-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                    <p>
+                        ملاحظات اداری: این سند مبنای حضور، غیاب و صدور کارکرد ماهانه پرسنل بوده و هرگونه جابجایی صرفاً با تأیید کتبی سرپرست معتبر است.
+                    </p>
+                    <p className="font-bold text-slate-700">
+                        سامانه یکپارچه مدیریت شیفت ShiftFlow
+                    </p>
                 </div>
             </div>
 
-            {/* Desktop Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden md:block print:block print:shadow-none print:border-0 print:rounded-none print:overflow-visible">
-               <div className="overflow-x-auto print:overflow-visible">
-                 <table className="w-full text-sm text-center border-collapse print:table-fixed print:text-[9pt]">
+            {/* Desktop Table (Screen Only) */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden md:block print:hidden">
+               <div className="overflow-x-auto">
+                 <table className="w-full text-sm text-center border-collapse">
                    <colgroup className="hidden print:table-column-group">
                        <col style={{width: '8%'}} />
                        <col style={{width: '12%'}} />
