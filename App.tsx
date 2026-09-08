@@ -1,14 +1,15 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { PersonalReportModal } from './components/PersonalReportModal';
 import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData, PublishedRange } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette, Cloud, CloudUpload, Wifi } from 'lucide-react';
 import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
 import { PERSONNEL_COLOR_PALETTE, getNextPersonnelColor, getPersonColor } from './utils/personnelColors';
+import { subscribeToCloudRoster, saveCloudRoster, resetCloudRoster } from './utils/firebase';
 
 const MONTHS = [
     { name: 'فروردین', code: '01' },
@@ -210,18 +211,147 @@ const App: React.FC = () => {
       setPwdForm({ current: '', new: '', confirm: '' });
   };
 
-  // --- AUTO SAVE EFFECTS ---
+  // --- CLOUD SYNCHRONIZATION VIA FIRESTORE ---
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('syncing');
+  const isRemoteUpdateRef = useRef(false);
+  const isInitialLoadCompletedRef = useRef(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Subscribe to real-time updates from Firestore
   useEffect(() => {
+    const unsubscribe = subscribeToCloudRoster(
+      (cloudData) => {
+        isRemoteUpdateRef.current = true;
+
+        if (cloudData.schedule && Array.isArray(cloudData.schedule) && cloudData.schedule.length > 0) {
+          setSchedule(cloudData.schedule);
+          try {
+            localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(cloudData.schedule));
+          } catch (e) {
+            console.error('LocalStorage error', e);
+          }
+        }
+        if (cloudData.personnelList && Array.isArray(cloudData.personnelList) && cloudData.personnelList.length > 0) {
+          setPersonnelList(cloudData.personnelList);
+          try {
+            localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(cloudData.personnelList));
+          } catch (e) {
+            console.error('LocalStorage error', e);
+          }
+        }
+        if (cloudData.unlockedMonths && Array.isArray(cloudData.unlockedMonths)) {
+          setUnlockedMonths(cloudData.unlockedMonths);
+          try {
+            localStorage.setItem(STORAGE_KEYS.LOCKED, JSON.stringify(cloudData.unlockedMonths));
+          } catch (e) {
+            console.error('LocalStorage error', e);
+          }
+        }
+        if (cloudData.publishedRange !== undefined) {
+          setPublishedRange(cloudData.publishedRange);
+          try {
+            if (cloudData.publishedRange && cloudData.publishedRange.isActive) {
+              localStorage.setItem(STORAGE_KEYS.PUBLISHED_RANGE, JSON.stringify(cloudData.publishedRange));
+            } else {
+              localStorage.removeItem(STORAGE_KEYS.PUBLISHED_RANGE);
+            }
+          } catch (e) {
+            console.error('LocalStorage error', e);
+          }
+        }
+        if (cloudData.adminPassword) {
+          setAdminPassword(cloudData.adminPassword);
+          try {
+            localStorage.setItem(STORAGE_KEYS.PASSWORD, cloudData.adminPassword);
+          } catch (e) {
+            console.error('LocalStorage error', e);
+          }
+        }
+
+        setSyncStatus('synced');
+        isInitialLoadCompletedRef.current = true;
+
+        // Reset remote update lock after state propagation
+        setTimeout(() => {
+          isRemoteUpdateRef.current = false;
+        }, 150);
+      },
+      // If Firestore doc does not exist yet, seed it with current local state
+      () => {
+        saveCloudRoster({
+          schedule,
+          personnelList,
+          unlockedMonths,
+          publishedRange,
+          adminPassword,
+        })
+          .then(() => {
+            setSyncStatus('synced');
+            isInitialLoadCompletedRef.current = true;
+          })
+          .catch((err) => {
+            console.error('Failed to initialize cloud roster:', err);
+            setSyncStatus('offline');
+            isInitialLoadCompletedRef.current = true;
+          });
+      },
+      (error) => {
+        console.error('Cloud roster subscription error:', error);
+        setSyncStatus('offline');
+        isInitialLoadCompletedRef.current = true;
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Save to Cloud & LocalStorage whenever changes occur (only when triggered locally, e.g. by admin)
+  useEffect(() => {
+    // Local storage backup
     localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
-  }, [schedule]);
-
-  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(personnelList));
-  }, [personnelList]);
-
-  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.LOCKED, JSON.stringify(unlockedMonths));
-  }, [unlockedMonths]);
+
+    // If update arrived from cloud, don't echo back
+    if (isRemoteUpdateRef.current) {
+      return;
+    }
+    // Don't save before initial subscription has received state
+    if (!isInitialLoadCompletedRef.current) {
+      return;
+    }
+
+    setSyncStatus('syncing');
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      saveCloudRoster({
+        schedule,
+        personnelList,
+        unlockedMonths,
+        publishedRange,
+        adminPassword,
+      })
+        .then(() => {
+          setSyncStatus('synced');
+        })
+        .catch((err) => {
+          console.error('Failed to sync to cloud:', err);
+          setSyncStatus('offline');
+        });
+    }, 400);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword]);
 
 
   // Calendar State - Defaults to today's Iranian date
@@ -556,11 +686,25 @@ const App: React.FC = () => {
       }
   };
   
-  const handleReset = () => {
+  const handleReset = async () => {
+      if (!confirm('آیا از بازنشانی کلیه اطلاعات به حالت پیش‌فرض مطمئن هستید؟')) return;
       setSchedule(SCHEDULE_DATA);
       setPersonnelList(INITIAL_STAFF);
       setUnlockedMonths([]);
+      setPublishedRange(null);
       localStorage.clear();
+      try {
+        await resetCloudRoster({
+          schedule: SCHEDULE_DATA,
+          personnelList: INITIAL_STAFF,
+          unlockedMonths: [],
+          publishedRange: null,
+          adminPassword: '1234',
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('Failed to reset cloud roster:', e);
+      }
       window.location.reload();
   };
   
@@ -661,6 +805,25 @@ const App: React.FC = () => {
                   ) : (
                     <span className="text-[10px] text-slate-400 font-medium">
                        سامانه مشاهده شیفت‌ها
+                    </span>
+                  )}
+
+                  {/* Cloud Sync Live Status Indicator */}
+                  {syncStatus === 'synced' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200" title="تغییرات به صورت زنده با تمام بازدیدکنندگان و دستگاه‌ها همگام است">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <Cloud size={11} className="text-emerald-600" />
+                      همگام ابری
+                    </span>
+                  ) : syncStatus === 'syncing' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse" title="در حال ذخیره و انتشار تغییرات در سرور ابری...">
+                      <CloudUpload size={11} className="text-amber-600" />
+                      در حال ذخیره...
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200" title="داده‌های محلی در دسترس هستند">
+                      <Cloud size={11} className="text-slate-400" />
+                      آفلاین
                     </span>
                   )}
                 </div>
