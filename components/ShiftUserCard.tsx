@@ -15,11 +15,13 @@ export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, classN
   const isNight = type === 'Night';
   const isSupervisor = type === 'Supervisor';
   
-  // Clean name logic
-  const displayName = name ? name.replace('مهندس', '').replace('خانم', '').replace('آقای', '').trim() : '---';
-  const displayOriginal = originalName ? originalName.replace('مهندس', '').replace('خانم', '').replace('آقای', '').trim() : null;
+  // Display full name with prefix (matching Settings page)
+  const displayName = name ? name.trim() : '---';
+  const displayOriginal = originalName ? originalName.trim() : null;
   
-  const firstLetter = displayName.charAt(0);
+  // Extract family name without prefix so the circle avatar preserves the first letter of the family name
+  const familyName = name ? name.replace(/^(مهندس|خانم|آقای|دکتر)\s*/, '').trim() : '';
+  const firstLetter = familyName ? familyName.charAt(0) : (name ? name.charAt(0) : '');
 
   // Styling Config
   let styles = {
