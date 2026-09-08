@@ -4,13 +4,13 @@ import { OFFICIAL_HOLIDAYS } from '../constants';
 import { getDayNameForJalali } from './persianDate';
 
 export const INITIAL_STAFF: Personnel[] = [
-  { name: 'مهندس لسانی', roles: ['Shift'], isActive: true },
-  { name: 'مهندس سلیمان فلاح', roles: ['Shift'], isActive: true },
-  { name: 'مهندس سامان', roles: ['Shift'], isActive: true },
-  { name: 'مهندس دهقان', roles: ['Shift'], isActive: true },
-  { name: 'مهندس سالاروند', roles: ['Shift'], isActive: true },
-  { name: 'مهندس منصوری', roles: ['Supervisor'], isActive: true },
-  { name: 'مهندس گودرزی', roles: ['Supervisor'], isActive: true },
+  { name: 'مهندس لسانی', roles: ['Shift'], isActive: true, color: '#2563eb' },
+  { name: 'مهندس سلیمان فلاح', roles: ['Shift'], isActive: true, color: '#e11d48' },
+  { name: 'مهندس سامان', roles: ['Shift'], isActive: true, color: '#059669' },
+  { name: 'مهندس دهقان', roles: ['Shift'], isActive: true, color: '#ea580c' },
+  { name: 'مهندس سالاروند', roles: ['Shift'], isActive: true, color: '#7c3aed' },
+  { name: 'مهندس منصوری', roles: ['Supervisor'], isActive: true, color: '#0891b2' },
+  { name: 'مهندس گودرزی', roles: ['Supervisor'], isActive: true, color: '#db2777' },
 ];
 
 const WEEK_DAYS = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];

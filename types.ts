@@ -7,6 +7,7 @@ export interface Personnel {
   name: string;
   roles: Role[];
   isActive: boolean;
+  color?: string; // Hex color code for chart and badge styling
 }
 
 export interface ShiftEntry {
@@ -55,6 +56,7 @@ export interface DashboardProps {
   fullSchedule: ShiftEntry[]; // Added for Live Status
   shiftWorkers: string[];
   supervisors: string[];
+  personnelList?: Personnel[]; // List of personnel with configured colors
   monthName: string;
   year: number;
   onPrevMonth: () => void;

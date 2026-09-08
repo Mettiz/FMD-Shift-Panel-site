@@ -7,6 +7,7 @@ import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
 import { StatsCard } from './StatsCard';
 import { getTodayPersianDateStr } from '../utils/persianDate';
+import { getPersonColor } from '../utils/personnelColors';
 
 // --- Constants for Date Selectors ---
 const PERSIAN_MONTHS = [
@@ -26,19 +27,9 @@ const PERSIAN_MONTHS = [
 
 const PERSIAN_DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 
-// Fixed Color Mapping per Person
-const GET_PERSON_COLOR = (name: string): string => {
-  if (name.includes('لسانی')) return '#2563eb';       // Blue
-  if (name.includes('سامان')) return '#059669';       // Green
-  if (name.includes('سلیمان')) return '#e11d48';      // Red (Soleiman Fallah)
-  if (name.includes('سالاروند')) return '#7c3aed';    // Purple
-  if (name.includes('دهقان')) return '#ea580c';       // Orange
-  
-  // Fallbacks for others (Supervisors/New staff)
-  if (name.includes('منصوری')) return '#0891b2';      // Cyan
-  if (name.includes('گودرزی')) return '#db2777';      // Pink
-  
-  return '#64748b'; // Default Slate
+// Dynamic Color Mapping per Person
+const GET_PERSON_COLOR = (name: string, list?: any[]): string => {
+  return getPersonColor(name, list);
 };
 
 // Helper to convert digits to Persian
@@ -119,6 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   fullSchedule,
   shiftWorkers, 
   supervisors,
+  personnelList,
   monthName, 
   year,
   onPrevMonth, 
@@ -1093,7 +1085,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            {chartData.map((entry, index) => (
                              <Cell 
                                  key={`cell-${index}`} 
-                                 fill={GET_PERSON_COLOR(entry.name)} 
+                                 fill={GET_PERSON_COLOR(entry.name, personnelList)} 
                                  style={{ outline: "none" }}
                              />
                            ))}
@@ -1118,7 +1110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <ul className="flex flex-wrap justify-center gap-2 mt-2 px-1">
                      {chartData.map((entry, index) => {
                          const isActive = index === activeIndex;
-                         const color = GET_PERSON_COLOR(entry.name);
+                         const color = GET_PERSON_COLOR(entry.name, personnelList);
                          
                          return (
                             <li 

@@ -6,8 +6,9 @@ import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData, PublishedRange } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette } from 'lucide-react';
 import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
+import { PERSONNEL_COLOR_PALETTE, getNextPersonnelColor, getPersonColor } from './utils/personnelColors';
 
 const MONTHS = [
     { name: 'فروردین', code: '01' },
@@ -81,7 +82,19 @@ const App: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<Personnel[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PERSONNEL);
-      return saved ? JSON.parse(saved) : INITIAL_STAFF;
+      const list: Personnel[] = saved ? JSON.parse(saved) : INITIAL_STAFF;
+      let hasChanges = false;
+      const updated = list.map(p => {
+        if (!p.color) {
+          hasChanges = true;
+          return { ...p, color: getPersonColor(p.name, list) };
+        }
+        return p;
+      });
+      if (hasChanges) {
+        localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(updated));
+      }
+      return updated;
     } catch (error) {
       console.error("Failed to load personnel from storage", error);
       return INITIAL_STAFF;
@@ -287,24 +300,46 @@ const App: React.FC = () => {
 
   // --- PERSONNEL MANAGEMENT ---
   const [newPersonName, setNewPersonName] = useState('');
+  const [newPersonColor, setNewPersonColor] = useState('');
+  const [activeColorPickerName, setActiveColorPickerName] = useState<string | null>(null);
   
+  const handleStartAddingPersonnel = (role: 'Shift' | 'Supervisor') => {
+    setNewPersonColor(getNextPersonnelColor(personnelList));
+    setNewPersonName('');
+    if (role === 'Shift') {
+      setIsAddingShiftPerson(true);
+      setIsAddingSupervisor(false);
+    } else {
+      setIsAddingSupervisor(true);
+      setIsAddingShiftPerson(false);
+    }
+  };
+
   const handleAddPersonnel = (role: 'Shift' | 'Supervisor') => {
     if (!newPersonName.trim()) return;
-    if (personnelList.some(p => p.name === newPersonName.trim())) {
+    if (personnelList.some(p => p.name.trim() === newPersonName.trim())) {
         alert('این نام قبلا ثبت شده است.');
         return;
     }
     
+    const assignedColor = newPersonColor || getNextPersonnelColor(personnelList);
+
     setPersonnelList([...personnelList, {
       name: newPersonName.trim(),
       roles: [role],
-      isActive: true
+      isActive: true,
+      color: assignedColor
     }]);
     setNewPersonName('');
+    setNewPersonColor('');
     
     // Close the add form
     if (role === 'Shift') setIsAddingShiftPerson(false);
     else setIsAddingSupervisor(false);
+  };
+
+  const handleUpdatePersonnelColor = (name: string, color: string) => {
+    setPersonnelList(prev => prev.map(p => p.name === name ? { ...p, color } : p));
   };
 
   const handleRemovePersonnel = (name: string) => {
@@ -684,6 +719,7 @@ const App: React.FC = () => {
             fullSchedule={schedule}
             shiftWorkers={shiftWorkers}
             supervisors={supervisors}
+            personnelList={personnelList}
             monthName={currentMonth.name}
             year={currentYear}
             onPrevMonth={handlePrevMonth}
@@ -806,46 +842,91 @@ const App: React.FC = () => {
                         {/* Toggle Add Form */}
                         {!isAddingShiftPerson ? (
                              <button 
-                                onClick={() => setIsAddingShiftPerson(true)}
+                                onClick={() => handleStartAddingPersonnel('Shift')}
                                 className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition flex items-center justify-center gap-2"
                              >
                                 <Plus size={20} />
                                 افزودن کارشناس جدید
                              </button>
                         ) : (
-                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
-                                <input 
-                                    autoFocus
-                                    type="text" 
-                                    placeholder="نام کارشناس جدید..." 
-                                    className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900"
-                                    value={newPersonName}
-                                    onChange={(e) => setNewPersonName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
-                                />
-                                <button 
-                                    onClick={() => { setIsAddingShiftPerson(false); setNewPersonName(''); }}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition"
-                                    title="انصراف"
-                                >
-                                    <X size={18} />
-                                </button>
-                                <button 
-                                    onClick={() => handleAddPersonnel('Shift')}
-                                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold"
-                                >
-                                    <Check size={18} />
-                                    تایید
-                                </button>
+                            <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                                <div className="flex gap-2">
+                                    <input 
+                                        autoFocus
+                                        type="text" 
+                                        placeholder="نام کارشناس جدید..." 
+                                        className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 bg-white"
+                                        value={newPersonName}
+                                        onChange={(e) => setNewPersonName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
+                                    />
+                                    <button 
+                                        onClick={() => { setIsAddingShiftPerson(false); setNewPersonName(''); setNewPersonColor(''); }}
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
+                                        title="انصراف"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleAddPersonnel('Shift')}
+                                        className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
+                                    >
+                                        <Check size={18} />
+                                        تایید
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t border-slate-200/70">
+                                    <span className="text-xs font-bold text-slate-600">رنگ اختصاصی در نمودار:</span>
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        {PERSONNEL_COLOR_PALETTE.slice(0, 10).map((c) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                onClick={() => setNewPersonColor(c)}
+                                                className={`w-5 h-5 rounded-full transition-all ${newPersonColor === c ? 'ring-2 ring-offset-1 ring-slate-800 scale-110 shadow-xs' : 'opacity-75 hover:opacity-100 hover:scale-105'}`}
+                                                style={{ backgroundColor: c }}
+                                                title={c}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         {/* List */}
                         <div className="space-y-2">
                             {personnelList.filter(p => p.roles.includes('Shift')).map((person) => (
-                                <div key={person.name} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-amber-200 hover:shadow-sm transition-all group">
+                                <div key={person.name} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-amber-200 hover:shadow-sm transition-all group relative">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-2 h-2 rounded-full ${person.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                                        
+                                        {/* Color Badge / Swatch */}
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveColorPickerName(activeColorPickerName === person.name ? null : person.name)}
+                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs hover:scale-125 transition-transform cursor-pointer block ring-1 ring-slate-200/80"
+                                                style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
+                                                title="تغییر رنگ اختصاصی در نمودار"
+                                            />
+                                            {activeColorPickerName === person.name && (
+                                                <div className="absolute right-0 top-6 z-50 bg-white p-2.5 rounded-xl shadow-xl border border-slate-200 grid grid-cols-6 gap-1.5 w-48 animate-in fade-in zoom-in-95">
+                                                    {PERSONNEL_COLOR_PALETTE.map((c) => (
+                                                        <button
+                                                            key={c}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleUpdatePersonnelColor(person.name, c);
+                                                                setActiveColorPickerName(null);
+                                                            }}
+                                                            className={`w-5 h-5 rounded-full hover:scale-110 transition-transform ${person.color === c ? 'ring-2 ring-offset-1 ring-slate-900 scale-110' : ''}`}
+                                                            style={{ backgroundColor: c }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <span className={`font-medium ${person.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
                                             {person.name}
                                         </span>
@@ -899,46 +980,91 @@ const App: React.FC = () => {
                         {/* Toggle Add Form */}
                         {!isAddingSupervisor ? (
                              <button 
-                                onClick={() => setIsAddingSupervisor(true)}
+                                onClick={() => handleStartAddingPersonnel('Supervisor')}
                                 className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-bold hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 transition flex items-center justify-center gap-2"
                              >
                                 <Plus size={20} />
                                 افزودن سرپرست جدید
                              </button>
                         ) : (
-                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
-                                <input 
-                                    autoFocus
-                                    type="text" 
-                                    placeholder="نام سرپرست جدید..." 
-                                    className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900"
-                                    value={newPersonName}
-                                    onChange={(e) => setNewPersonName(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
-                                />
-                                <button 
-                                    onClick={() => { setIsAddingSupervisor(false); setNewPersonName(''); }}
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition"
-                                    title="انصراف"
-                                >
-                                    <X size={18} />
-                                </button>
-                                <button 
-                                    onClick={() => handleAddPersonnel('Supervisor')}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold"
-                                >
-                                    <Check size={18} />
-                                    تایید
-                                </button>
+                            <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                                <div className="flex gap-2">
+                                    <input 
+                                        autoFocus
+                                        type="text" 
+                                        placeholder="نام سرپرست جدید..." 
+                                        className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
+                                        value={newPersonName}
+                                        onChange={(e) => setNewPersonName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
+                                    />
+                                    <button 
+                                        onClick={() => { setIsAddingSupervisor(false); setNewPersonName(''); setNewPersonColor(''); }}
+                                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
+                                        title="انصراف"
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                    <button 
+                                        onClick={() => handleAddPersonnel('Supervisor')}
+                                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
+                                    >
+                                        <Check size={18} />
+                                        تایید
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t border-slate-200/70">
+                                    <span className="text-xs font-bold text-slate-600">رنگ اختصاصی در نمودار:</span>
+                                    <div className="flex flex-wrap gap-1.5 items-center">
+                                        {PERSONNEL_COLOR_PALETTE.slice(0, 10).map((c) => (
+                                            <button
+                                                key={c}
+                                                type="button"
+                                                onClick={() => setNewPersonColor(c)}
+                                                className={`w-5 h-5 rounded-full transition-all ${newPersonColor === c ? 'ring-2 ring-offset-1 ring-slate-800 scale-110 shadow-xs' : 'opacity-75 hover:opacity-100 hover:scale-105'}`}
+                                                style={{ backgroundColor: c }}
+                                                title={c}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         )}
 
                         {/* List */}
                         <div className="space-y-2">
                             {personnelList.filter(p => p.roles.includes('Supervisor')).map((person) => (
-                                <div key={person.name} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-emerald-200 hover:shadow-sm transition-all group">
+                                <div key={person.name} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:border-emerald-200 hover:shadow-sm transition-all group relative">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-2 h-2 rounded-full ${person.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                                        
+                                        {/* Color Badge / Swatch */}
+                                        <div className="relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveColorPickerName(activeColorPickerName === person.name ? null : person.name)}
+                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs hover:scale-125 transition-transform cursor-pointer block ring-1 ring-slate-200/80"
+                                                style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
+                                                title="تغییر رنگ اختصاصی در نمودار"
+                                            />
+                                            {activeColorPickerName === person.name && (
+                                                <div className="absolute right-0 top-6 z-50 bg-white p-2.5 rounded-xl shadow-xl border border-slate-200 grid grid-cols-6 gap-1.5 w-48 animate-in fade-in zoom-in-95">
+                                                    {PERSONNEL_COLOR_PALETTE.map((c) => (
+                                                        <button
+                                                            key={c}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                handleUpdatePersonnelColor(person.name, c);
+                                                                setActiveColorPickerName(null);
+                                                            }}
+                                                            className={`w-5 h-5 rounded-full hover:scale-110 transition-transform ${person.color === c ? 'ring-2 ring-offset-1 ring-slate-900 scale-110' : ''}`}
+                                                            style={{ backgroundColor: c }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <span className={`font-medium ${person.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
                                             {person.name}
                                         </span>
