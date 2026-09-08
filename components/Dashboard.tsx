@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
-import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck } from 'lucide-react';
+import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, X, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Sector } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
@@ -141,7 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       to: { year: string, month: string, day: string }
   } | null>(null);
 
-  // Initialize defaults on mount once
+  // Sync date picker defaults whenever month/scheduleData changes
   React.useEffect(() => {
      if (scheduleData.length > 0) {
          const first = scheduleData[0].date.split('/');
@@ -153,10 +153,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
          setFromDate(defFrom);
          setToDate(defTo);
      }
-  }, [scheduleData.length]); 
+  }, [scheduleData, year]); 
 
   const handleApplyFilter = () => {
-      setAppliedFilter({ from: fromDate, to: toDate });
+      // Validate ordering: if from > to, swap or correct
+      const startStr = `${fromDate.year}/${fromDate.month}/${fromDate.day}`;
+      const endStr = `${toDate.year}/${toDate.month}/${toDate.day}`;
+      if (startStr > endStr) {
+          setAppliedFilter({ from: toDate, to: fromDate });
+          setFromDate(toDate);
+          setToDate(fromDate);
+      } else {
+          setAppliedFilter({ from: fromDate, to: toDate });
+      }
       setViewMode('RANGE');
       setIsFiltersOpen(false);
   };
@@ -164,6 +173,54 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleClearFilter = () => {
       setAppliedFilter(null);
       setViewMode('MONTH');
+      if (scheduleData.length > 0) {
+          const first = scheduleData[0].date.split('/');
+          const last = scheduleData[scheduleData.length - 1].date.split('/');
+          setFromDate({ year: first[0], month: first[1], day: first[2] });
+          setToDate({ year: last[0], month: last[1], day: last[2] });
+      }
+  };
+
+  // Quick Range Presets
+  const applyQuickRange = (type: 'firstHalf' | 'secondHalf' | 'next7Days' | 'fullMonth') => {
+      if (scheduleData.length === 0) return;
+      const first = scheduleData[0].date.split('/');
+      const last = scheduleData[scheduleData.length - 1].date.split('/');
+      const currentYear = first[0];
+      const currentMonth = first[1];
+
+      if (type === 'firstHalf') {
+          const from = { year: currentYear, month: currentMonth, day: '01' };
+          const to = { year: currentYear, month: currentMonth, day: '15' };
+          setFromDate(from);
+          setToDate(to);
+          setAppliedFilter({ from, to });
+          setViewMode('RANGE');
+      } else if (type === 'secondHalf') {
+          const from = { year: currentYear, month: currentMonth, day: '16' };
+          const to = { year: last[0], month: last[1], day: last[2] };
+          setFromDate(from);
+          setToDate(to);
+          setAppliedFilter({ from, to });
+          setViewMode('RANGE');
+      } else if (type === 'next7Days') {
+          const todayParts = todayPersianDate.split('/');
+          const from = { year: todayParts[0], month: todayParts[1], day: todayParts[2] };
+          // Find 7 days from today in fullSchedule
+          const todayIdx = fullSchedule.findIndex(s => s.date === todayPersianDate);
+          let targetEntry = todayIdx >= 0 && todayIdx + 6 < fullSchedule.length 
+              ? fullSchedule[todayIdx + 6] 
+              : fullSchedule[Math.min(todayIdx >= 0 ? todayIdx + 6 : fullSchedule.length - 1, fullSchedule.length - 1)];
+          
+          const toParts = (targetEntry ? targetEntry.date : todayPersianDate).split('/');
+          const to = { year: toParts[0], month: toParts[1], day: toParts[2] };
+          setFromDate(from);
+          setToDate(to);
+          setAppliedFilter({ from, to });
+          setViewMode('RANGE');
+      } else if (type === 'fullMonth') {
+          handleClearFilter();
+      }
   };
 
   const filteredSchedule = useMemo(() => {
@@ -277,13 +334,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
          {/* Top Bar: Title & Month Nav */}
          <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3 w-full md:w-auto">
-               <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
+               <div className="bg-emerald-100 p-2.5 rounded-xl text-emerald-600 shadow-xs">
                   <CalendarRange size={24} />
                </div>
                <div>
-                  <h2 className="text-sm md:text-lg font-black text-slate-800 tracking-tight">برنامه شیفت {monthName} {toPersianDigits(year)}</h2>
+                  <div className="flex items-center gap-2 flex-wrap">
+                     <h2 className="text-sm md:text-lg font-black text-slate-800 tracking-tight">
+                        {viewMode === 'RANGE' && appliedFilter 
+                           ? `نمایش بازه ${toPersianDigits(appliedFilter.from.year)}/${toPersianDigits(appliedFilter.from.month)}/${toPersianDigits(appliedFilter.from.day)} تا ${toPersianDigits(appliedFilter.to.year)}/${toPersianDigits(appliedFilter.to.month)}/${toPersianDigits(appliedFilter.to.day)}`
+                           : `برنامه شیفت ${monthName} ${toPersianDigits(year)}`
+                        }
+                     </h2>
+                     {viewMode === 'RANGE' && (
+                        <span className="bg-blue-100 text-blue-700 text-[11px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
+                           بازه محدود شده
+                        </span>
+                     )}
+                     {filterPerson !== 'All' && (
+                        <span className="bg-emerald-100 text-emerald-700 text-[11px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
+                           فیلتر: {filterPerson.replace('مهندس', '')}
+                        </span>
+                     )}
+                  </div>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                     {toPersianDigits(filteredSchedule.length)} رکورد نمایش داده شده
+                     {toPersianDigits(filteredSchedule.length)} روز شیفت نمایش داده شده
                   </p>
                </div>
             </div>
@@ -333,15 +407,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                <span className="hidden md:inline">{isLocked ? 'قفل' : 'باز'}</span>
             </button>
 
-            {/* 3. Advanced Filter */}
+            {/* 3. Range & Filter Toggle Button */}
             <button 
                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border ${isFiltersOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600'}`}
-               title="فیلترهای پیشرفته"
+               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border whitespace-nowrap ${
+                  appliedFilter || filterPerson !== 'All' 
+                     ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-200' 
+                     : isFiltersOpen 
+                        ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+               }`}
+               title="محدود کردن روزها و انتخاب بازه زمانی نمایش"
             >
                <Filter size={16} />
-               <span className="hidden md:inline">فیلتر پیشرفته</span>
-               {isFiltersOpen ? <ChevronUp size={14} className="hidden md:inline" /> : <ChevronDown size={14} className="hidden md:inline" />}
+               <span>محدودسازی روزها و بازه</span>
+               {appliedFilter && (
+                  <span className="bg-white/25 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">
+                     فعال
+                  </span>
+               )}
+               {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
             {/* 4. Personal Report */}
@@ -365,13 +450,143 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
          </div>
 
+         {/* Active Filter Banner when Range is Applied */}
+         {appliedFilter && !isFiltersOpen && (
+            <div className="flex items-center justify-between bg-blue-50/90 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-900 shadow-xs">
+               <div className="flex items-center gap-2 flex-wrap font-medium">
+                  <CalendarRange size={16} className="text-blue-600" />
+                  <span>نمایش روزها محدود شده به بازه:</span>
+                  <span className="font-extrabold text-blue-950 dir-ltr bg-white px-2 py-0.5 rounded border border-blue-200">
+                     {toPersianDigits(appliedFilter.from.year)}/{toPersianDigits(appliedFilter.from.month)}/{toPersianDigits(appliedFilter.from.day)} تا {toPersianDigits(appliedFilter.to.year)}/{toPersianDigits(appliedFilter.to.month)}/{toPersianDigits(appliedFilter.to.day)}
+                  </span>
+                  <span className="text-slate-500 font-bold">({toPersianDigits(filteredSchedule.length)} روز)</span>
+               </div>
+               <div className="flex items-center gap-2">
+                  <button 
+                     onClick={() => setIsFiltersOpen(true)}
+                     className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline px-2 py-1"
+                  >
+                     تغییر بازه
+                  </button>
+                  <button 
+                     onClick={handleClearFilter}
+                     className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs"
+                     title="حذف محدودیت و نمایش کل ماه"
+                  >
+                     <X size={14} />
+                     <span>نمایش کل ماه</span>
+                  </button>
+               </div>
+            </div>
+         )}
+
          {/* Advanced Filters Panel */}
          {isFiltersOpen && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm animate-in slide-in-from-top-2">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm space-y-5 animate-in slide-in-from-top-2">
+               
+               {/* Quick Presets for Days Limitation */}
+               <div>
+                  <div className="flex justify-between items-center mb-2">
+                     <span className="text-xs font-bold text-slate-600 block">انتخاب سریع بازه روزها:</span>
+                     {appliedFilter && (
+                        <button 
+                           onClick={handleClearFilter}
+                           className="flex items-center gap-1 text-[11px] font-bold text-red-600 hover:bg-red-50 px-2 py-0.5 rounded transition"
+                        >
+                           <X size={12} />
+                           حذف محدودیت (نمایش کامل ماه)
+                        </button>
+                     )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                     <button 
+                        type="button"
+                        onClick={() => applyQuickRange('firstHalf')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition"
+                     >
+                        ۱ تا ۱۵ ماه (نیمه اول)
+                     </button>
+                     <button 
+                        type="button"
+                        onClick={() => applyQuickRange('secondHalf')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition"
+                     >
+                        ۱۶ تا پایان ماه (نیمه دوم)
+                     </button>
+                     <button 
+                        type="button"
+                        onClick={() => applyQuickRange('next7Days')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 transition"
+                     >
+                        ۷ روز از امروز به بعد
+                     </button>
+                     <button 
+                        type="button"
+                        onClick={() => applyQuickRange('fullMonth')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                           !appliedFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+                        }`}
+                     >
+                        کل ماه
+                     </button>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
+                  {/* Date Range Selector */}
+                  <div>
+                      <label className="text-xs font-bold text-slate-600 block mb-2">محدود کردن دقیق روزها (از تاریخ ... تا تاریخ ...):</label>
+                      
+                      <div className="flex flex-col gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                              {/* From Group */}
+                              <div className="flex items-center gap-1 w-full sm:w-auto justify-start">
+                                  <span className="text-xs font-bold text-slate-500 min-w-[22px]">از:</span>
+                                  <DashboardDateSelect value={fromDate.day} onChange={(v) => setFromDate({...fromDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
+                                  <DashboardDateSelect value={fromDate.month} onChange={(v) => setFromDate({...fromDate, month: v})} options={PERSIAN_MONTHS} width="w-[82px]" />
+                                  <DashboardDateSelect value={fromDate.year} onChange={(v) => setFromDate({...fromDate, year: v})} options={['1403', '1404', '1405']} width="w-[62px]" />
+                              </div>
+                              
+                              {/* To Group */}
+                              <div className="flex items-center gap-1 w-full sm:w-auto justify-start">
+                                  <span className="text-xs font-bold text-slate-500 min-w-[22px]">تا:</span>
+                                  <DashboardDateSelect value={toDate.day} onChange={(v) => setToDate({...toDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
+                                  <DashboardDateSelect value={toDate.month} onChange={(v) => setToDate({...toDate, month: v})} options={PERSIAN_MONTHS} width="w-[82px]" />
+                                  <DashboardDateSelect value={toDate.year} onChange={(v) => setToDate({...toDate, year: v})} options={['1403', '1404', '1405']} width="w-[62px]" />
+                              </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
+                                <span className="text-[11px] text-slate-500">
+                                   بازه انتخابی: {toPersianDigits(fromDate.year)}/{toPersianDigits(fromDate.month)}/{toPersianDigits(fromDate.day)} تا {toPersianDigits(toDate.year)}/{toPersianDigits(toDate.month)}/{toPersianDigits(toDate.day)}
+                                </span>
+                                <div className="flex gap-1.5">
+                                   {appliedFilter && (
+                                      <button 
+                                          onClick={handleClearFilter}
+                                          className="h-8 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-600 hover:border-red-400 hover:text-red-600 rounded-lg text-xs font-bold transition gap-1"
+                                          title="لغو محدودیت بازه"
+                                      >
+                                          <X size={14} />
+                                          <span>نمایش همه</span>
+                                      </button>
+                                   )}
+                                   <button 
+                                       onClick={handleApplyFilter}
+                                       className="h-8 px-4 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition gap-1 shadow-xs"
+                                       title="اعمال و نمایش بازه"
+                                   >
+                                       <CheckCircle2 size={15} />
+                                       <span>اعمال بازه</span>
+                                   </button>
+                                </div>
+                          </div>
+                      </div>
+                  </div>
+
                   {/* Person Filter */}
                   <div>
-                     <label className="text-xs font-bold text-slate-500 mb-2 block">فیلتر پرسنل:</label>
+                     <label className="text-xs font-bold text-slate-600 mb-2 block">فیلتر پرسنل (اختیاری):</label>
                      <div className="flex flex-wrap gap-2">
                         <button 
                            onClick={() => setFilterPerson('All')}
@@ -389,60 +604,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            </button>
                         ))}
                      </div>
-                  </div>
-
-                  {/* Date Range Filter */}
-                  <div>
-                      <div className="flex justify-between items-center mb-2">
-                         <label className="text-xs font-bold text-slate-500 block">فیلتر بازه زمانی (اختیاری):</label>
-                         {appliedFilter && (
-                             <button onClick={handleClearFilter} className="text-[10px] text-red-500 hover:bg-red-50 px-2 py-0.5 rounded transition">
-                                 حذف فیلتر
-                             </button>
-                         )}
-                      </div>
-                      
-                      <div className="flex flex-col xl:flex-row gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                          <div className="flex flex-col md:flex-row gap-2 md:items-center">
-                              {/* From Group */}
-                              <div className="flex items-center gap-1 justify-center md:justify-start">
-                                  <span className="text-xs font-bold text-slate-400 min-w-[20px]">از:</span>
-                                  <DashboardDateSelect value={fromDate.day} onChange={(v) => setFromDate({...fromDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
-                                  <DashboardDateSelect value={fromDate.month} onChange={(v) => setFromDate({...fromDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
-                                  <DashboardDateSelect value={fromDate.year} onChange={(v) => setFromDate({...fromDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
-                              </div>
-                              
-                              {/* To Group */}
-                              <div className="flex items-center gap-1 justify-center md:justify-start">
-                                  <span className="text-xs font-bold text-slate-400 min-w-[20px]">تا:</span>
-                                  <DashboardDateSelect value={toDate.day} onChange={(v) => setToDate({...toDate, day: v})} options={PERSIAN_DAYS} width="w-[50px]" />
-                                  <DashboardDateSelect value={toDate.month} onChange={(v) => setToDate({...toDate, month: v})} options={PERSIAN_MONTHS} width="w-[80px]" />
-                                  <DashboardDateSelect value={toDate.year} onChange={(v) => setToDate({...toDate, year: v})} options={['1403', '1404', '1405']} width="w-[60px]" />
-                              </div>
-                          </div>
-
-                          <div className="mr-auto flex gap-1 justify-end w-full xl:w-auto pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-200">
-                                <button 
-                                    onClick={() => {
-                                        setAppliedFilter(null);
-                                        setViewMode('MONTH');
-                                    }}
-                                    className="h-9 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-red-400 hover:text-red-500 transition gap-1"
-                                    title="لغو فیلتر"
-                                >
-                                    <XCircle size={18} />
-                                    <span className="text-xs font-bold xl:hidden">لغو</span>
-                                </button>
-                                <button 
-                                    onClick={handleApplyFilter}
-                                    className="h-9 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-400 rounded-lg hover:border-emerald-500 hover:text-emerald-600 transition gap-1"
-                                    title="اعمال فیلتر"
-                                >
-                                    <CheckCircle2 size={18} />
-                                    <span className="text-xs font-bold xl:hidden">اعمال</span>
-                                </button>
-                          </div>
-                      </div>
                   </div>
                </div>
             </div>
@@ -563,6 +724,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
                          </tr>
                        );
                      })}
+                     {filteredSchedule.length === 0 && (
+                       <tr>
+                         <td colSpan={5} className="p-8 text-center text-slate-500 bg-slate-50/50">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                               <CalendarRange size={32} className="text-slate-300" />
+                               <p className="font-bold text-sm text-slate-600">در بازه زمانی انتخاب شده رکوردی یافت نشد</p>
+                               <button 
+                                  onClick={handleClearFilter}
+                                  className="mt-1 text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                                >
+                                  بازگشت به نمایش کل ماه
+                               </button>
+                            </div>
+                         </td>
+                       </tr>
+                     )}
                    </tbody>
                  </table>
                </div>
@@ -570,6 +747,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-4 print:hidden">
+              {filteredSchedule.length === 0 && (
+                 <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+                    <CalendarRange size={32} className="text-slate-300 mx-auto mb-2" />
+                    <p className="font-bold text-sm text-slate-600">در بازه زمانی انتخاب شده رکوردی یافت نشد</p>
+                    <button 
+                       onClick={handleClearFilter}
+                       className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 underline"
+                    >
+                       بازگشت به نمایش کل ماه
+                    </button>
+                 </div>
+              )}
               {filteredSchedule.map(entry => {
                  const isToday = entry.date === todayPersianDate;
                  const isFriday = entry.dayName === 'جمعه';
