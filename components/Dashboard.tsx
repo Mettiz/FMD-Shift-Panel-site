@@ -668,7 +668,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2">
                      <Crown size={18} className="text-amber-500" />
-                     <span className="font-extrabold text-slate-900 text-sm">مدیریت و محدودسازی بازه نمایش روزها (مخصوص صاحب پنل)</span>
+                     <span className="font-extrabold text-slate-900 text-sm">مدیریت و محدودسازی بازه نمایش روزها (مخصوص مدیر پنل)</span>
                   </div>
                   <button 
                      onClick={() => setIsFiltersOpen(false)}

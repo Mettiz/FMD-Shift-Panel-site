@@ -12,35 +12,44 @@ interface StatsCardProps {
 
 export const StatsCard: React.FC<StatsCardProps> = ({ title, value, subtitle, icon: Icon, colorClass, type = 'horizontal' }) => {
   if (type === 'square') {
-    const isLongText = typeof value === 'string' && value.length > 7;
-    const isVeryLongText = typeof value === 'string' && value.length > 13;
+    const stringValue = typeof value === 'string' ? value : String(value ?? '');
+    const textLength = stringValue.length;
+    const isTextLong = textLength > 10;
+
+    // Dynamically scale font size according to text length so full name always fits cleanly in the mosaic
+    let valueFontSize = 'text-xl sm:text-2xl leading-none';
+    if (textLength > 24) {
+      valueFontSize = 'text-[9px] sm:text-[10px] leading-tight font-bold';
+    } else if (textLength > 18) {
+      valueFontSize = 'text-[10px] sm:text-[11px] leading-tight font-bold';
+    } else if (textLength > 14) {
+      valueFontSize = 'text-[11px] sm:text-xs leading-tight font-bold';
+    } else if (textLength > 10) {
+      valueFontSize = 'text-xs sm:text-sm leading-snug font-bold';
+    } else if (textLength > 6) {
+      valueFontSize = 'text-sm sm:text-base leading-snug font-extrabold';
+    }
 
     return (
-      <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-between text-center transition hover:shadow-md h-full w-full overflow-hidden">
+      <div className="bg-white p-2.5 sm:p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-between text-center transition hover:shadow-md h-full w-full overflow-hidden">
         {/* Icon */}
-        <div className={`p-2 sm:p-2.5 rounded-full ${colorClass} bg-opacity-10 text-opacity-100 shrink-0 mt-0.5`}>
-          <Icon size={22} className={`sm:w-6 sm:h-6 ${colorClass.replace('bg-', 'text-')}`} />
+        <div className={`p-1.5 ${isTextLong ? 'sm:p-1.5' : 'sm:p-2'} rounded-full ${colorClass} bg-opacity-10 text-opacity-100 shrink-0 mt-0.5`}>
+          <Icon size={isTextLong ? 18 : 22} className={`${colorClass.replace('bg-', 'text-')}`} />
         </div>
 
         {/* Content */}
-        <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 px-0.5 my-1">
-          <p className="text-[11px] sm:text-xs text-slate-500 font-bold mb-0.5 truncate max-w-full">
+        <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 px-0.5 my-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 font-bold mb-0.5 shrink-0 max-w-full truncate">
             {title}
           </p>
           <p 
-            className={`font-black text-slate-800 leading-tight w-full break-words line-clamp-2 px-0.5 ${
-              isVeryLongText 
-                ? 'text-xs sm:text-sm' 
-                : isLongText 
-                  ? 'text-sm sm:text-base' 
-                  : 'text-xl sm:text-2xl'
-            }`}
-            title={typeof value === 'string' ? value : undefined}
+            className={`text-slate-800 w-full break-words text-center px-0.5 ${valueFontSize}`}
+            title={stringValue}
           >
             {value}
           </p>
           {subtitle && (
-            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium truncate max-w-full">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium shrink-0 max-w-full truncate">
               {subtitle}
             </p>
           )}

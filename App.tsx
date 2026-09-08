@@ -656,7 +656,7 @@ const App: React.FC = () => {
                   {isOwner ? (
                     <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200">
                        <Crown size={11} className="text-amber-600" />
-                       صاحب پنل (مدیر)
+                       مدیر پنل
                     </span>
                   ) : (
                     <span className="text-[10px] text-slate-400 font-medium">
@@ -691,7 +691,7 @@ const App: React.FC = () => {
                 <button
                   onClick={handleLogoutOwner}
                   className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 px-2.5 py-1.5 rounded-lg transition"
-                  title="خروج از حساب صاحب پنل (مشاهده به عنوان سایر کاربران)"
+                  title="خروج از حساب مدیر پنل (مشاهده به عنوان سایر کاربران)"
                 >
                   <LogOut size={13} />
                   <span className="hidden sm:inline">خروج مدیر</span>

@@ -52,7 +52,7 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule, onNavigateToToda
         <div className="flex flex-col items-center md:items-start gap-2 min-w-[200px]">
            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-             وضعیت زنده (تهران)
+             وضعیت زنده
            </div>
            <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mt-2 text-center md:text-right">
              {currentWeekdayStr || 'سه‌شنبه'}

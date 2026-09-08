@@ -85,10 +85,6 @@ export const ShiftUserCard: React.FC<ShiftUserCardProps> = ({ name, type, classN
              {displayOriginal}
            </span>
         )}
-
-        <span className={`text-[10px] font-medium ${styles.subText} truncate`}>
-          {isSupervisor ? 'سرپرست شیفت' : 'مهندس شیفت'}
-        </span>
       </div>
     </div>
   );
