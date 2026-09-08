@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
-import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, X, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck } from 'lucide-react';
+import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, X, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck, Crown, ShieldCheck, Globe } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Sector } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
@@ -66,41 +66,51 @@ const DashboardDateSelect = ({ value, onChange, options, width = "w-[60px]" }: {
   </div>
 );
 
-// Custom Active Shape for Pie Chart
-const renderActiveShape = (props: any) => {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, value } = props;
-  const name = payload.name.replace('مهندس', '').trim();
+// Custom Sector Shape for Pie Chart supporting both slice hover and legend hover
+const renderSectorShape = (props: any, activeIndex: number | null) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, index } = props;
+  const isCurrentActive = index === activeIndex;
+
+  if (isCurrentActive) {
+    return (
+      <g style={{ outline: 'none' }}>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius - 2}
+          outerRadius={outerRadius + 6}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          cornerRadius={5}
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 8}
+          outerRadius={outerRadius + 13}
+          fill={fill}
+          fillOpacity={0.3}
+          cornerRadius={8}
+        />
+      </g>
+    );
+  }
 
   return (
-    <g>
-      <text x={cx} y={cy} dy={-8} textAnchor="middle" fill="#334155" style={{ fontSize: '13px', fontWeight: 'bold', fontFamily: 'inherit' }}>
-        {name}
-      </text>
-      <text x={cx} y={cy} dy={14} textAnchor="middle" fill="#64748b" style={{ fontSize: '11px', fontFamily: 'inherit', fontWeight: 'bold', direction: 'rtl' }}>
-        {toPersianDigits(value)} ساعت
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 5}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-        cornerRadius={4}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 7}
-        outerRadius={outerRadius + 11}
-        fill={fill}
-        fillOpacity={0.2}
-        cornerRadius={8}
-      />
-    </g>
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={outerRadius}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={fill}
+      fillOpacity={activeIndex !== null && activeIndex !== undefined ? 0.45 : 1}
+      cornerRadius={4}
+    />
   );
 };
 
@@ -119,7 +129,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isLocked,
   onToggleLock,
   onRegenerate,
-  onNavigateToToday
+  onNavigateToToday,
+  isOwner,
+  onOpenOwnerLogin,
+  onLogoutOwner,
+  publishedRange,
+  onSavePublishedRange
 }) => {
   const todayPersianDate = useMemo(() => getTodayPersianDateStr(), []);
   const [filterPerson, setFilterPerson] = useState<string | 'All'>('All');
@@ -139,11 +154,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [appliedFilter, setAppliedFilter] = useState<{
       from: { year: string, month: string, day: string },
       to: { year: string, month: string, day: string }
-  } | null>(null);
+  } | null>(() => {
+    if (publishedRange && publishedRange.isActive) {
+      return { from: publishedRange.from, to: publishedRange.to };
+    }
+    return null;
+  });
 
-  // Sync date picker defaults whenever month/scheduleData changes
+  // Keep state synchronized with publishedRange
   React.useEffect(() => {
-     if (scheduleData.length > 0) {
+    if (publishedRange && publishedRange.isActive) {
+      setAppliedFilter({ from: publishedRange.from, to: publishedRange.to });
+      setFromDate(publishedRange.from);
+      setToDate(publishedRange.to);
+      setViewMode('RANGE');
+    } else {
+      // If not owner, always follow publishedRange (or default month if none)
+      if (!isOwner) {
+        setAppliedFilter(null);
+        setViewMode('MONTH');
+      }
+    }
+  }, [publishedRange, isOwner]);
+
+  // Sync date picker defaults whenever month/scheduleData changes (if no range active)
+  React.useEffect(() => {
+     if (scheduleData.length > 0 && !publishedRange?.isActive && !appliedFilter) {
          const first = scheduleData[0].date.split('/');
          const last = scheduleData[scheduleData.length - 1].date.split('/');
          
@@ -153,7 +189,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
          setFromDate(defFrom);
          setToDate(defTo);
      }
-  }, [scheduleData, year]); 
+  }, [scheduleData, year, publishedRange, appliedFilter]); 
 
   const handleApplyFilter = () => {
       // Validate ordering: if from > to, swap or correct
@@ -170,7 +206,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setIsFiltersOpen(false);
   };
 
-  const handleClearFilter = () => {
+  const handlePublishRangeForEveryone = () => {
+      const startStr = `${fromDate.year}/${fromDate.month}/${fromDate.day}`;
+      const endStr = `${toDate.year}/${toDate.month}/${toDate.day}`;
+      let finalFrom = fromDate;
+      let finalTo = toDate;
+      if (startStr > endStr) {
+          finalFrom = toDate;
+          finalTo = fromDate;
+          setFromDate(toDate);
+          setToDate(fromDate);
+      }
+      const range = { isActive: true, from: finalFrom, to: finalTo };
+      setAppliedFilter(range);
+      setViewMode('RANGE');
+      onSavePublishedRange(range);
+      setIsFiltersOpen(false);
+  };
+
+  const handleClearPublishedRange = () => {
+      onSavePublishedRange(null);
       setAppliedFilter(null);
       setViewMode('MONTH');
       if (scheduleData.length > 0) {
@@ -178,6 +233,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
           const last = scheduleData[scheduleData.length - 1].date.split('/');
           setFromDate({ year: first[0], month: first[1], day: first[2] });
           setToDate({ year: last[0], month: last[1], day: last[2] });
+      }
+  };
+
+  const handleClearFilter = () => {
+      // If there is an active published range and owner clears local filter, revert to published or full month
+      if (publishedRange?.isActive) {
+        setAppliedFilter({ from: publishedRange.from, to: publishedRange.to });
+        setFromDate(publishedRange.from);
+        setToDate(publishedRange.to);
+        setViewMode('RANGE');
+      } else {
+        setAppliedFilter(null);
+        setViewMode('MONTH');
+        if (scheduleData.length > 0) {
+            const first = scheduleData[0].date.split('/');
+            const last = scheduleData[scheduleData.length - 1].date.split('/');
+            setFromDate({ year: first[0], month: first[1], day: first[2] });
+            setToDate({ year: last[0], month: last[1], day: last[2] });
+        }
       }
   };
 
@@ -306,6 +380,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
       .sort((a, b) => b.totalHours - a.totalHours);
   }, [stats]);
 
+  // Active person for center chart display
+  const activePerson = useMemo(() => {
+    if (chartData.length === 0) return null;
+    if (activeIndex !== null && chartData[activeIndex]) {
+      return chartData[activeIndex];
+    }
+    return chartData[0];
+  }, [chartData, activeIndex]);
+
+  const renderCustomSector = (props: any) => {
+    return renderSectorShape(props, activeIndex);
+  };
+
   // Sync Legend Clicks with Chart Active Index
   const onPieClick = (_: any, index: number) => {
     setActiveIndex(index);
@@ -387,47 +474,59 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
          {/* Toolbar: Actions & Filters */}
          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
-            {/* 1. Update (Regenerate) */}
-            <button 
-              onClick={onRegenerate}
-              className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap"
-              title="چیدمان مجدد هوشمند"
-            >
-               <RefreshCw size={16} />
-               <span className="hidden md:inline">آپدیت</span>
-            </button>
+            {/* 1. Update (Regenerate) - Owner Only */}
+            {isOwner && (
+              <button 
+                onClick={onRegenerate}
+                className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap"
+                title="چیدمان مجدد هوشمند"
+              >
+                 <RefreshCw size={16} />
+                 <span className="hidden md:inline">آپدیت</span>
+              </button>
+            )}
 
-            {/* 2. Lock */}
-            <button 
-              onClick={onToggleLock}
-              className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-600'}`}
-              title={isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}
-            >
-               {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-               <span className="hidden md:inline">{isLocked ? 'قفل' : 'باز'}</span>
-            </button>
+            {/* 2. Lock - Owner Only */}
+            {isOwner && (
+              <button 
+                onClick={onToggleLock}
+                className={`flex items-center gap-2 border px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap ${isLocked ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-slate-200 text-slate-600'}`}
+                title={isLocked ? 'قفل شده' : 'باز (قابل ویرایش)'}
+              >
+                 {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                 <span className="hidden md:inline">{isLocked ? 'قفل' : 'باز'}</span>
+              </button>
+            )}
 
-            {/* 3. Range & Filter Toggle Button */}
-            <button 
-               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border whitespace-nowrap ${
-                  appliedFilter || filterPerson !== 'All' 
-                     ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-200' 
-                     : isFiltersOpen 
-                        ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-               }`}
-               title="محدود کردن روزها و انتخاب بازه زمانی نمایش"
-            >
-               <Filter size={16} />
-               <span>محدودسازی روزها و بازه</span>
-               {appliedFilter && (
-                  <span className="bg-white/25 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">
-                     فعال
-                  </span>
-               )}
-               {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
+            {/* 3. Range & Filter Toggle Button - OWNER ONLY */}
+            {isOwner && (
+              <button 
+                 onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-sm border whitespace-nowrap cursor-pointer ${
+                    publishedRange?.isActive 
+                       ? 'bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-200' 
+                       : appliedFilter 
+                          ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-200' 
+                          : isFiltersOpen 
+                             ? 'bg-amber-50 border-amber-200 text-amber-800' 
+                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                 }`}
+                 title="محدودسازی روزها و تعیین بازه برای نمایش به سایر کاربران"
+              >
+                 <Crown size={15} className={publishedRange?.isActive || appliedFilter ? 'text-white' : 'text-amber-600'} />
+                 <span>محدودسازی روزها و بازه</span>
+                 {publishedRange?.isActive ? (
+                    <span className="bg-black/20 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">
+                       منتشر شده برای همه
+                    </span>
+                 ) : appliedFilter ? (
+                    <span className="bg-white/25 text-white px-1.5 py-0.5 rounded-full text-[10px] font-black">
+                       پیش‌نمایش
+                    </span>
+                 ) : null}
+                 {isFiltersOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            )}
 
             {/* 4. Personal Report */}
             <button 
@@ -450,51 +549,164 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
          </div>
 
-         {/* Active Filter Banner when Range is Applied */}
-         {appliedFilter && !isFiltersOpen && (
-            <div className="flex items-center justify-between bg-blue-50/90 border border-blue-200 rounded-xl px-4 py-2.5 text-xs text-blue-900 shadow-xs">
-               <div className="flex items-center gap-2 flex-wrap font-medium">
-                  <CalendarRange size={16} className="text-blue-600" />
-                  <span>نمایش روزها محدود شده به بازه:</span>
-                  <span className="font-extrabold text-blue-950 dir-ltr bg-white px-2 py-0.5 rounded border border-blue-200">
-                     {toPersianDigits(appliedFilter.from.year)}/{toPersianDigits(appliedFilter.from.month)}/{toPersianDigits(appliedFilter.from.day)} تا {toPersianDigits(appliedFilter.to.year)}/{toPersianDigits(appliedFilter.to.month)}/{toPersianDigits(appliedFilter.to.day)}
-                  </span>
-                  <span className="text-slate-500 font-bold">({toPersianDigits(filteredSchedule.length)} روز)</span>
+         {/* --- BANNERS SECTION --- */}
+         
+         {/* Case 1: Owner viewing with a Published Range active */}
+         {isOwner && publishedRange?.isActive && !isFiltersOpen && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-amber-50/95 border border-amber-300 rounded-2xl p-3.5 sm:px-4 sm:py-3 text-xs text-amber-950 shadow-xs">
+               <div className="flex items-center gap-2.5 flex-wrap font-medium">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                     <Crown size={18} />
+                  </div>
+                  <div>
+                     <div className="flex items-center gap-2">
+                        <span className="font-black text-amber-900 text-sm">بازه عمومی محدودشده توسط شما (فعال برای همه کاربران):</span>
+                        <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                           نمایش قفل شده
+                        </span>
+                     </div>
+                     <div className="flex items-center gap-2 mt-1">
+                        <span className="font-extrabold text-amber-950 dir-ltr bg-white px-2.5 py-0.5 rounded-md border border-amber-300 shadow-2xs">
+                           {toPersianDigits(publishedRange.from.year)}/{toPersianDigits(publishedRange.from.month)}/{toPersianDigits(publishedRange.from.day)} تا {toPersianDigits(publishedRange.to.year)}/{toPersianDigits(publishedRange.to.month)}/{toPersianDigits(publishedRange.to.day)}
+                        </span>
+                        <span className="text-amber-800 font-bold">({toPersianDigits(filteredSchedule.length)} روز شیفت مجاز)</span>
+                     </div>
+                  </div>
                </div>
-               <div className="flex items-center gap-2">
+               <div className="flex items-center gap-2 self-end sm:self-auto">
                   <button 
                      onClick={() => setIsFiltersOpen(true)}
-                     className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline px-2 py-1"
+                     className="bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                      تغییر بازه
                   </button>
                   <button 
-                     onClick={handleClearFilter}
-                     className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded-lg text-xs font-bold transition shadow-xs"
-                     title="حذف محدودیت و نمایش کل ماه"
+                     onClick={handleClearPublishedRange}
+                     className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                     title="لغو انتشار بازه برای کاربران و بازگشت به نمایش تقویم عادی برای همه"
                   >
                      <X size={14} />
-                     <span>نمایش کل ماه</span>
+                     <span>لغو محدودیت عمومی</span>
                   </button>
                </div>
             </div>
          )}
 
-         {/* Advanced Filters Panel */}
-         {isFiltersOpen && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-sm space-y-5 animate-in slide-in-from-top-2">
+         {/* Case 2: Owner with a temporary local filter applied (not yet published) */}
+         {isOwner && !publishedRange?.isActive && appliedFilter && !isFiltersOpen && (
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-blue-50/90 border border-blue-200 rounded-2xl p-3.5 sm:px-4 sm:py-3 text-xs text-blue-900 shadow-xs">
+               <div className="flex items-center gap-2.5 flex-wrap font-medium">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                     <Filter size={18} />
+                  </div>
+                  <div>
+                     <div className="flex items-center gap-2">
+                        <span className="font-bold text-blue-900">بازه موقت (پیش‌نمایش شخصی شما):</span>
+                        <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
+                           هنوز برای سایر کاربران ذخیره نشده
+                        </span>
+                     </div>
+                     <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-extrabold text-blue-950 dir-ltr bg-white px-2 py-0.5 rounded-lg border border-blue-200">
+                           {toPersianDigits(appliedFilter.from.year)}/{toPersianDigits(appliedFilter.from.month)}/{toPersianDigits(appliedFilter.from.day)} تا {toPersianDigits(appliedFilter.to.year)}/{toPersianDigits(appliedFilter.to.month)}/{toPersianDigits(appliedFilter.to.day)}
+                        </span>
+                        <span className="text-slate-500 font-bold">({toPersianDigits(filteredSchedule.length)} روز)</span>
+                     </div>
+                  </div>
+               </div>
+               <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+                  <button 
+                     onClick={handlePublishRangeForEveryone}
+                     className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl text-xs font-black transition shadow-xs cursor-pointer"
+                     title="انتشار این بازه برای همه کاربران تا سایرین فقط این روزها را ببینند"
+                  >
+                     <Crown size={14} />
+                     <span>انتشار برای همه کاربران</span>
+                  </button>
+                  <button 
+                     onClick={() => setIsFiltersOpen(true)}
+                     className="text-xs font-bold text-blue-700 hover:text-blue-900 hover:underline px-2 py-1 cursor-pointer"
+                  >
+                     تغییر بازه
+                  </button>
+                  <button 
+                     onClick={handleClearFilter}
+                     className="flex items-center gap-1 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2.5 py-1.5 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                  >
+                     <X size={14} />
+                     <span>لغو</span>
+                  </button>
+               </div>
+            </div>
+         )}
+
+         {/* Case 3: Non-Owner viewing when a Published Range is active */}
+         {!isOwner && publishedRange?.isActive && (
+            <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/90 rounded-2xl p-3.5 sm:px-4 sm:py-3 text-xs text-blue-950 shadow-xs">
+               <div className="flex items-center gap-2.5 flex-wrap font-medium">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                     <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                     <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-blue-900 text-sm">بازه زمانی مجاز (تعیین‌شده توسط مدیریت):</span>
+                        <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                           بازه تایید شده
+                        </span>
+                     </div>
+                     <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-black text-blue-950 dir-ltr bg-white px-2.5 py-0.5 rounded-lg border border-blue-200 shadow-2xs">
+                           {toPersianDigits(publishedRange.from.year)}/{toPersianDigits(publishedRange.from.month)}/{toPersianDigits(publishedRange.from.day)} تا {toPersianDigits(publishedRange.to.year)}/{toPersianDigits(publishedRange.to.month)}/{toPersianDigits(publishedRange.to.day)}
+                        </span>
+                        <span className="text-slate-600 font-bold">({toPersianDigits(filteredSchedule.length)} روز شیفت)</span>
+                     </div>
+                  </div>
+               </div>
+               <div className="text-[11px] text-slate-500 font-medium hidden md:block">
+                  تنها روزهای مجاز مشخص‌شده توسط مدیریت نمایش داده می‌شود.
+               </div>
+            </div>
+         )}
+
+         {/* Advanced Filters Panel - STRICTLY OWNER ONLY */}
+         {isOwner && isFiltersOpen && (
+            <div className="bg-white border border-amber-200/80 rounded-2xl p-4 md:p-5 shadow-sm space-y-5 animate-in slide-in-from-top-2 ring-1 ring-amber-100">
                
+               {/* Header of Filter Panel */}
+               <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                     <Crown size={18} className="text-amber-500" />
+                     <span className="font-extrabold text-slate-900 text-sm">مدیریت و محدودسازی بازه نمایش روزها (مخصوص صاحب پنل)</span>
+                  </div>
+                  <button 
+                     onClick={() => setIsFiltersOpen(false)}
+                     className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                  >
+                     <X size={18} />
+                  </button>
+               </div>
+
+               {/* Explanatory Tip */}
+               <div className="bg-amber-50/70 border border-amber-200/70 rounded-xl p-3 text-xs text-amber-900 leading-5">
+                  <p className="font-bold">
+                     💡 برای اینکه دیگر کاربران و پرسنل صرفاً بازه مدنظر شما را ببینند و نتوانند آن را تغییر دهند:
+                  </p>
+                  <p className="text-amber-800 mt-0.5">
+                     بازه روزها را انتخاب کرده و دکمه <strong>«انتشار و قفل برای همه کاربران»</strong> را بزنید. بقیه کاربران بدون امکان تغییر، تنها همین بازه انتخابی شما را مشاهده خواهند کرد.
+                  </p>
+               </div>
+
                {/* Quick Presets for Days Limitation */}
                <div>
                   <div className="flex justify-between items-center mb-2">
                      <span className="text-xs font-bold text-slate-600 block">انتخاب سریع بازه روزها:</span>
-                     {appliedFilter && (
+                     {(appliedFilter || publishedRange?.isActive) && (
                         <button 
                            onClick={handleClearFilter}
-                           className="flex items-center gap-1 text-[11px] font-bold text-red-600 hover:bg-red-50 px-2 py-0.5 rounded transition"
+                           className="flex items-center gap-1 text-[11px] font-bold text-red-600 hover:bg-red-50 px-2 py-0.5 rounded transition cursor-pointer"
                         >
                            <X size={12} />
-                           حذف محدودیت (نمایش کامل ماه)
+                           حذف محدودیت
                         </button>
                      )}
                   </div>
@@ -502,29 +714,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <button 
                         type="button"
                         onClick={() => applyQuickRange('firstHalf')}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition cursor-pointer"
                      >
                         ۱ تا ۱۵ ماه (نیمه اول)
                      </button>
                      <button 
                         type="button"
                         onClick={() => applyQuickRange('secondHalf')}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 transition cursor-pointer"
                      >
                         ۱۶ تا پایان ماه (نیمه دوم)
                      </button>
                      <button 
                         type="button"
                         onClick={() => applyQuickRange('next7Days')}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 transition"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 border border-slate-200 transition cursor-pointer"
                      >
                         ۷ روز از امروز به بعد
                      </button>
                      <button 
                         type="button"
                         onClick={() => applyQuickRange('fullMonth')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-                           !appliedFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer ${
+                           !appliedFilter && !publishedRange?.isActive ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
                         }`}
                      >
                         کل ماه
@@ -556,30 +768,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </div>
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
-                                <span className="text-[11px] text-slate-500">
-                                   بازه انتخابی: {toPersianDigits(fromDate.year)}/{toPersianDigits(fromDate.month)}/{toPersianDigits(fromDate.day)} تا {toPersianDigits(toDate.year)}/{toPersianDigits(toDate.month)}/{toPersianDigits(toDate.day)}
+                          <div className="pt-2 border-t border-slate-200/80">
+                                <span className="text-[11px] text-slate-500 block">
+                                   بازه انتخابی: <strong className="text-slate-800 dir-ltr">{toPersianDigits(fromDate.year)}/{toPersianDigits(fromDate.month)}/{toPersianDigits(fromDate.day)}</strong> تا <strong className="text-slate-800 dir-ltr">{toPersianDigits(toDate.year)}/{toPersianDigits(toDate.month)}/{toPersianDigits(toDate.day)}</strong>
                                 </span>
-                                <div className="flex gap-1.5">
-                                   {appliedFilter && (
-                                      <button 
-                                          onClick={handleClearFilter}
-                                          className="h-8 px-3 flex items-center justify-center bg-white border border-slate-300 text-slate-600 hover:border-red-400 hover:text-red-600 rounded-lg text-xs font-bold transition gap-1"
-                                          title="لغو محدودیت بازه"
-                                      >
-                                          <X size={14} />
-                                          <span>نمایش همه</span>
-                                      </button>
-                                   )}
-                                   <button 
-                                       onClick={handleApplyFilter}
-                                       className="h-8 px-4 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition gap-1 shadow-xs"
-                                       title="اعمال و نمایش بازه"
-                                   >
-                                       <CheckCircle2 size={15} />
-                                       <span>اعمال بازه</span>
-                                   </button>
-                                </div>
                           </div>
                       </div>
                   </div>
@@ -590,7 +782,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <div className="flex flex-wrap gap-2">
                         <button 
                            onClick={() => setFilterPerson('All')}
-                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterPerson === 'All' ? 'bg-slate-800 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${filterPerson === 'All' ? 'bg-slate-800 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                         >
                            همه
                         </button>
@@ -598,12 +790,49 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            <button 
                               key={p}
                               onClick={() => setFilterPerson(p)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${filterPerson === p ? 'bg-emerald-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${filterPerson === p ? 'bg-emerald-600 text-white shadow' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                            >
                               {p.replace('مهندس', '')}
                            </button>
                         ))}
                      </div>
+                  </div>
+               </div>
+
+               {/* Bottom Actions for Owner */}
+               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200">
+                  <div className="flex items-center gap-2">
+                     {publishedRange?.isActive && (
+                        <button 
+                           type="button"
+                           onClick={handleClearPublishedRange}
+                           className="h-9 px-3 flex items-center justify-center bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold transition gap-1 cursor-pointer"
+                           title="لغو انتشار بازه برای کاربران و بازگشت به نمایش تقویم عادی"
+                        >
+                           <X size={14} />
+                           <span>لغو بازه عمومی (نمایش کامل برای همه)</span>
+                        </button>
+                     )}
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                     <button 
+                         type="button"
+                         onClick={handleApplyFilter}
+                         className="h-9 px-4 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition gap-1.5 cursor-pointer"
+                         title="اعمال موقت فقط در نشست فعلی شما"
+                     >
+                         <CheckCircle2 size={15} className="text-slate-600" />
+                         <span>پیش‌نمایش برای خودم</span>
+                     </button>
+                     <button 
+                         type="button"
+                         onClick={handlePublishRangeForEveryone}
+                         className="h-9 px-5 flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black transition gap-2 shadow-md hover:shadow-lg cursor-pointer"
+                         title="ذخیره و محدودسازی نمایش فقط به این بازه برای تمام کاربران"
+                     >
+                         <Crown size={15} />
+                         <span>انتشار و قفل برای همه کاربران</span>
+                     </button>
                   </div>
                </div>
             </div>
@@ -843,74 +1072,79 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <h3 className="font-bold text-slate-800 text-sm lg:text-lg">نمودار توزیع کاری</h3>
                   <Scale size={16} className="text-slate-400" />
                </div>
-               <div className="h-[300px] w-full relative">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        activeIndex={activeIndex}
-                        activeShape={renderActiveShape}
-                        data={chartData as any}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius="60%"
-                        outerRadius="80%"
-                        paddingAngle={2}
-                        dataKey="totalHours"
-                        nameKey="name"
-                        onClick={onPieClick}
-                        onMouseEnter={onPieClick}
-                        // Explicitly casting these props to avoid TS error if types are outdated
-                        {...({ activeIndex, activeShape: renderActiveShape } as any)}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell 
-                              key={`cell-${index}`} 
-                              fill={GET_PERSON_COLOR(entry.name)} 
-                              strokeWidth={0}
-                              style={{ outline: 'none' }}
-                          />
-                        ))}
-                      </Pie>
-                      <Legend 
-                        layout="horizontal" 
-                        verticalAlign="bottom" 
-                        align="center"
-                        content={() => {
-                             return (
-                                 <ul className="flex flex-wrap justify-center gap-2 mt-4">
-                                     {chartData.map((entry, index) => {
-                                         const isActive = index === activeIndex;
-                                         const color = GET_PERSON_COLOR(entry.name);
-                                         
-                                         return (
-                                            <li 
-                                                key={`legend-item-${index}`} 
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 border-2 ${
-                                                  isActive 
-                                                    ? 'bg-white shadow-md scale-105' 
-                                                    : 'bg-transparent border-transparent opacity-60 hover:opacity-100 hover:bg-slate-50'
-                                                }`}
-                                                style={{
-                                                    borderColor: isActive ? color : 'transparent'
-                                                }}
-                                                onClick={() => setActiveIndex(index)}
-                                            >
-                                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }}></span>
-                                                <span 
-                                                    className={`text-xs ${isActive ? 'font-black' : 'font-medium text-slate-700'}`}
-                                                    style={{ color: isActive ? color : undefined }}
-                                                >
-                                                  {entry.name.replace('مهندس', '').trim()}
-                                                </span>
-                                            </li>
-                                         );
-                                     })}
-                                 </ul>
-                             );
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+               <div className="flex flex-col items-center w-full">
+                  {/* Donut Chart Container with Center Info */}
+                  <div className="h-64 sm:h-72 w-full relative flex items-center justify-center">
+                     <ResponsiveContainer width="100%" height="100%">
+                       <PieChart>
+                         <Pie
+                           data={chartData as any}
+                           cx="50%"
+                           cy="50%"
+                           innerRadius="62%"
+                           outerRadius="84%"
+                           paddingAngle={3}
+                           dataKey="totalHours"
+                           nameKey="name"
+                           shape={renderCustomSector}
+                           onClick={onPieClick}
+                           onMouseEnter={onPieClick}
+                         >
+                           {chartData.map((entry, index) => (
+                             <Cell 
+                                 key={`cell-${index}`} 
+                                 fill={GET_PERSON_COLOR(entry.name)} 
+                                 style={{ outline: "none" }}
+                             />
+                           ))}
+                         </Pie>
+                       </PieChart>
+                     </ResponsiveContainer>
+
+                     {/* Center Display: Always centered in the donut, shows the hovered person's name and hours */}
+                     {activePerson && (
+                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none transition-all duration-150">
+                         <span className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-tight">
+                           {activePerson.name.replace("مهندس", "").trim()}
+                         </span>
+                         <span className="text-xs sm:text-sm font-extrabold text-slate-600 mt-1" dir="rtl">
+                           {toPersianDigits(activePerson.totalHours)} ساعت
+                         </span>
+                       </div>
+                     )}
+                  </div>
+
+                  {/* Personnel Name Pills (Legend) */}
+                  <ul className="flex flex-wrap justify-center gap-2 mt-2 px-1">
+                     {chartData.map((entry, index) => {
+                         const isActive = index === activeIndex;
+                         const color = GET_PERSON_COLOR(entry.name);
+                         
+                         return (
+                            <li 
+                                key={`legend-item-${index}`} 
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full cursor-pointer transition-all duration-200 border-2 select-none ${
+                                  isActive 
+                                    ? "bg-white shadow-md scale-105 ring-2 ring-offset-1 ring-slate-200" 
+                                    : "bg-transparent border-transparent opacity-65 hover:opacity-100 hover:bg-slate-50"
+                                }`}
+                                style={{
+                                    borderColor: isActive ? color : "transparent"
+                                }}
+                                onClick={() => setActiveIndex(index)}
+                                onMouseEnter={() => setActiveIndex(index)}
+                            >
+                                <span className={`w-2.5 h-2.5 rounded-full transition-transform duration-200 ${isActive ? "scale-125" : ""}`} style={{ backgroundColor: color }}></span>
+                                <span 
+                                    className={`text-xs transition-colors duration-200 ${isActive ? "font-black" : "font-medium text-slate-700"}`}
+                                    style={{ color: isActive ? color : undefined }}
+                                >
+                                  {entry.name.replace("مهندس", "").trim()}
+                                </span>
+                            </li>
+                         );
+                     })}
+                  </ul>
                </div>
            </div>
 

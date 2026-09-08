@@ -5,8 +5,8 @@ import { PersonalReportModal } from './components/PersonalReportModal';
 import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
-import { ShiftEntry, Personnel, AppData } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus } from 'lucide-react';
+import { ShiftEntry, Personnel, AppData, PublishedRange } from './types';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck } from 'lucide-react';
 import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
 
 const MONTHS = [
@@ -28,7 +28,9 @@ const STORAGE_KEYS = {
   SCHEDULE: 'shiftflow_schedule_v2',
   PERSONNEL: 'shiftflow_personnel_v2',
   LOCKED: 'shiftflow_locked_v2',
-  PASSWORD: 'shiftflow_admin_password'
+  PASSWORD: 'shiftflow_admin_password',
+  PUBLISHED_RANGE: 'shiftflow_published_range_v2',
+  IS_OWNER: 'shiftflow_is_owner_authenticated'
 };
 
 const App: React.FC = () => {
@@ -95,13 +97,45 @@ const App: React.FC = () => {
     }
   }); // Format: YYYY/MM
 
-  // --- SETTINGS LOCK & PASSWORD STATE ---
+  // --- OWNER & AUTHENTICATION STATE ---
   const [adminPassword, setAdminPassword] = useState(() => {
       return localStorage.getItem(STORAGE_KEYS.PASSWORD) || '1234';
   });
-  const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(false);
+  const [isOwner, setIsOwner] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.IS_OWNER) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isSettingsUnlocked, setIsSettingsUnlocked] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.IS_OWNER) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [settingsPassword, setSettingsPassword] = useState('');
+
+  // --- PUBLISHED RANGE STATE (Owner designated range visible to everyone) ---
+  const [publishedRange, setPublishedRange] = useState<PublishedRange | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.PUBLISHED_RANGE);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSavePublishedRange = (range: PublishedRange | null) => {
+    setPublishedRange(range);
+    if (range && range.isActive) {
+      localStorage.setItem(STORAGE_KEYS.PUBLISHED_RANGE, JSON.stringify(range));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.PUBLISHED_RANGE);
+    }
+  };
 
   // --- CHANGE PASSWORD MODAL STATE ---
   const [isChangePwdOpen, setChangePwdOpen] = useState(false);
@@ -113,11 +147,27 @@ const App: React.FC = () => {
 
   const handleUnlockSettings = () => {
     if (settingsPassword === adminPassword) {
+        setIsOwner(true);
         setIsSettingsUnlocked(true);
+        try {
+          localStorage.setItem(STORAGE_KEYS.IS_OWNER, 'true');
+        } catch (e) {
+          console.error(e);
+        }
         setSettingsPassword('');
         setIsPasswordModalOpen(false);
     } else {
         alert('رمز عبور اشتباه است.');
+    }
+  };
+
+  const handleLogoutOwner = () => {
+    setIsOwner(false);
+    setIsSettingsUnlocked(false);
+    try {
+      localStorage.removeItem(STORAGE_KEYS.IS_OWNER);
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -466,6 +516,9 @@ const App: React.FC = () => {
       if (data.schedule) setSchedule(data.schedule);
       if (data.personnel) setPersonnelList(data.personnel);
       if (data.lockedMonths) setUnlockedMonths(data.lockedMonths);
+      if (data.publishedRange !== undefined) {
+        handleSavePublishedRange(data.publishedRange);
+      }
   };
   
   const handleReset = () => {
@@ -560,24 +613,64 @@ const App: React.FC = () => {
               <div className="bg-emerald-600 text-white px-2 py-1 rounded-lg min-w-[40px] sm:min-w-[48px] flex items-center justify-center">
                  <span className="font-bold text-lg sm:text-xl leading-none" style={{ fontFamily: '"Times New Roman", Times, serif' }}>FMD</span>
               </div>
-              <h1 className="text-sm sm:text-xl font-black text-slate-800 tracking-tight">
-                سامانه شیفت تولید
-              </h1>
+              <div>
+                <h1 className="text-sm sm:text-lg font-black text-slate-800 tracking-tight leading-tight">
+                  سامانه شیفت تولید
+                </h1>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {isOwner ? (
+                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200">
+                       <Crown size={11} className="text-amber-600" />
+                       صاحب پنل (مدیر)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-medium">
+                       سامانه مشاهده شیفت‌ها
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
             
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button 
                 onClick={() => setActiveTab('dashboard')}
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'dashboard' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 داشبورد
               </button>
               <button 
-                onClick={() => setActiveTab('settings')}
-                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}
+                onClick={() => {
+                  if (!isOwner) {
+                    setIsPasswordModalOpen(true);
+                  } else {
+                    setActiveTab('settings');
+                  }
+                }}
+                className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 تنظیمات
               </button>
+
+              {isOwner ? (
+                <button
+                  onClick={handleLogoutOwner}
+                  className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 px-2.5 py-1.5 rounded-lg transition"
+                  title="خروج از حساب صاحب پنل (مشاهده به عنوان سایر کاربران)"
+                >
+                  <LogOut size={13} />
+                  <span className="hidden sm:inline">خروج مدیر</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="flex items-center gap-1 text-xs font-bold text-slate-700 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 px-2.5 py-1.5 rounded-lg transition"
+                  title="ورود"
+                >
+                  <KeyRound size={13} className="text-emerald-600" />
+                  <span>ورود</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -602,6 +695,11 @@ const App: React.FC = () => {
             onToggleLock={handleToggleLock}
             onRegenerate={handleRegenerate}
             onNavigateToToday={handleNavigateToToday}
+            isOwner={isOwner}
+            onOpenOwnerLogin={() => setIsPasswordModalOpen(true)}
+            onLogoutOwner={handleLogoutOwner}
+            publishedRange={publishedRange}
+            onSavePublishedRange={handleSavePublishedRange}
           />
         ) : (
           <div className="relative min-h-[80vh]">
@@ -612,59 +710,6 @@ const App: React.FC = () => {
                     onClick={() => setIsPasswordModalOpen(true)}
                     title="برای ایجاد تغییرات کلیک کنید"
                  ></div>
-             )}
-
-             {/* 2. UNLOCK PASSWORD MODAL */}
-             {isPasswordModalOpen && !isSettingsUnlocked && (
-                 <div 
-                    className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
-                    onClick={handleClosePasswordModal}
-                 >
-                     <div 
-                         className="bg-white p-6 rounded-2xl shadow-2xl border border-slate-200 text-center max-w-xs w-full animate-in zoom-in-95 relative" 
-                         onClick={e => e.stopPropagation()}
-                     >
-                         <button 
-                             onClick={handleClosePasswordModal}
-                             className="absolute top-2 left-2 text-slate-400 hover:text-slate-600 p-1"
-                         >
-                             <X size={20} />
-                         </button>
-
-                         <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-200">
-                             <Lock size={24} />
-                         </div>
-                         <h3 className="font-bold text-slate-900 text-lg mb-2">بخش محافظت شده</h3>
-                         <p className="text-slate-800 text-sm mb-4 font-bold">لطفا رمز عبور را وارد کنید.</p>
-                         
-                         <div className="space-y-3">
-                             <input 
-                                id="settings-pwd-input"
-                                type="password" 
-                                className="w-full bg-white border border-slate-300 text-slate-900 placeholder-slate-400 text-center rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 outline-none dir-ltr tracking-widest font-bold"
-                                placeholder="****"
-                                value={settingsPassword}
-                                onChange={e => setSettingsPassword(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleUnlockSettings()}
-                                autoFocus
-                             />
-                             <div className="flex gap-2">
-                                 <button 
-                                    onClick={handleClosePasswordModal}
-                                    className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-800 px-3 py-2 rounded-lg text-sm font-medium transition"
-                                 >
-                                     انصراف
-                                 </button>
-                                 <button 
-                                    onClick={handleUnlockSettings}
-                                    className="flex-1 bg-slate-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-black transition shadow-md"
-                                 >
-                                     تایید
-                                 </button>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
              )}
              
              {/* 3. CHANGE PASSWORD MODAL */}
@@ -1204,7 +1249,7 @@ const App: React.FC = () => {
                 </div>
 
                 <DataManagement 
-                    currentData={{ schedule, personnel: personnelList, lockedMonths: unlockedMonths }} 
+                    currentData={{ schedule, personnel: personnelList, lockedMonths: unlockedMonths, publishedRange }} 
                     onImport={handleImport}
                     onReset={handleReset}
                 />
@@ -1222,6 +1267,61 @@ const App: React.FC = () => {
         staffList={shiftWorkers}
         monthName={`${currentMonth.name} ${currentYear.toLocaleString('fa-IR', {useGrouping:false})}`}
       />
+
+      {/* Universal Owner Login Password Modal */}
+      {isPasswordModalOpen && (
+          <div 
+             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-200"
+             onClick={handleClosePasswordModal}
+          >
+              <div 
+                  className="bg-white p-6 rounded-2xl shadow-2xl border border-slate-200 text-center max-w-sm w-full animate-in zoom-in-95 relative" 
+                  onClick={e => e.stopPropagation()}
+              >
+                  <button 
+                      onClick={handleClosePasswordModal}
+                      className="absolute top-3 left-3 text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition"
+                  >
+                      <X size={20} />
+                  </button>
+
+                  <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200 shadow-xs">
+                      <Crown size={28} className="text-amber-600" />
+                  </div>
+                  <h3 className="font-extrabold text-slate-900 text-lg mb-1">ورود</h3>
+                  <p className="text-slate-600 text-xs mb-4">
+                     جهت دسترسی به تنظیمات و محدودسازی بازه نمایش عمومی، لطفا رمز عبور مدیریت را وارد کنید.
+                  </p>
+                  
+                  <div className="space-y-3">
+                      <input 
+                         id="settings-pwd-input"
+                         type="password" 
+                         className="w-full bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-center rounded-xl px-3 py-2.5 text-base focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none dir-ltr tracking-widest font-black transition"
+                         placeholder="****"
+                         value={settingsPassword}
+                         onChange={e => setSettingsPassword(e.target.value)}
+                         onKeyDown={e => e.key === 'Enter' && handleUnlockSettings()}
+                         autoFocus
+                      />
+                      <div className="flex gap-2">
+                          <button 
+                             onClick={handleClosePasswordModal}
+                             className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer"
+                          >
+                              انصراف
+                          </button>
+                          <button 
+                             onClick={handleUnlockSettings}
+                             className="flex-1 bg-slate-900 text-white px-3 py-2.5 rounded-xl text-xs font-bold hover:bg-black transition shadow-md cursor-pointer"
+                          >
+                              ورود به عنوان مدیر
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

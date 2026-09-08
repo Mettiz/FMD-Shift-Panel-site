@@ -38,6 +38,18 @@ export const SHIFT_WEIGHTS = {
   nightMultiplier: 1.5
 };
 
+export interface DateParts {
+  year: string;
+  month: string;
+  day: string;
+}
+
+export interface PublishedRange {
+  isActive: boolean;
+  from: DateParts;
+  to: DateParts;
+}
+
 export interface DashboardProps {
   scheduleData: ShiftEntry[];
   fullSchedule: ShiftEntry[]; // Added for Live Status
@@ -56,10 +68,17 @@ export interface DashboardProps {
   onToggleLock: () => void;
   onRegenerate: () => void; // Added for Auto Arrange
   onNavigateToToday?: () => void;
+  // Owner and Range Restriction props
+  isOwner: boolean;
+  onOpenOwnerLogin: () => void;
+  onLogoutOwner?: () => void;
+  publishedRange: PublishedRange | null;
+  onSavePublishedRange: (range: PublishedRange | null) => void;
 }
 
 export interface AppData {
   schedule: ShiftEntry[];
   personnel: Personnel[];
   lockedMonths: string[]; 
+  publishedRange?: PublishedRange | null;
 }

@@ -12,15 +12,38 @@ interface StatsCardProps {
 
 export const StatsCard: React.FC<StatsCardProps> = ({ title, value, subtitle, icon: Icon, colorClass, type = 'horizontal' }) => {
   if (type === 'square') {
+    const isLongText = typeof value === 'string' && value.length > 7;
+    const isVeryLongText = typeof value === 'string' && value.length > 13;
+
     return (
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center space-y-3 transition hover:shadow-md h-full w-full">
-        <div className={`p-4 rounded-full ${colorClass} bg-opacity-10 text-opacity-100`}>
-          <Icon size={32} className={colorClass.replace('bg-', 'text-')} />
+      <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col items-center justify-between text-center transition hover:shadow-md h-full w-full overflow-hidden">
+        {/* Icon */}
+        <div className={`p-2 sm:p-2.5 rounded-full ${colorClass} bg-opacity-10 text-opacity-100 shrink-0 mt-0.5`}>
+          <Icon size={22} className={`sm:w-6 sm:h-6 ${colorClass.replace('bg-', 'text-')}`} />
         </div>
-        <div>
-          <p className="text-sm text-slate-500 font-bold mb-1">{title}</p>
-          <p className="text-2xl font-black text-slate-800">{value}</p>
-          {subtitle && <p className="text-xs text-slate-400 mt-1 font-medium">{subtitle}</p>}
+
+        {/* Content */}
+        <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 px-0.5 my-1">
+          <p className="text-[11px] sm:text-xs text-slate-500 font-bold mb-0.5 truncate max-w-full">
+            {title}
+          </p>
+          <p 
+            className={`font-black text-slate-800 leading-tight w-full break-words line-clamp-2 px-0.5 ${
+              isVeryLongText 
+                ? 'text-xs sm:text-sm' 
+                : isLongText 
+                  ? 'text-sm sm:text-base' 
+                  : 'text-xl sm:text-2xl'
+            }`}
+            title={typeof value === 'string' ? value : undefined}
+          >
+            {value}
+          </p>
+          {subtitle && (
+            <p className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 font-medium truncate max-w-full">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
     );
