@@ -2,38 +2,41 @@
 import React, { useEffect, useState } from 'react';
 import { ShiftEntry } from '../types';
 import { ShiftUserCard } from './ShiftUserCard';
-import { Calendar, Clock } from 'lucide-react';
+import { Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { 
+  getTodayPersianDateStr, 
+  getTodayPersianTimeStr, 
+  getTodayPersianWeekday, 
+  toPersianDigits 
+} from '../utils/persianDate';
 
 interface TodayHeroProps {
   schedule: ShiftEntry[];
+  onNavigateToToday?: () => void;
 }
 
-const toPersianDigits = (s: string | number) => String(s).replace(/\d/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
-
-export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
+export const TodayHero: React.FC<TodayHeroProps> = ({ schedule, onNavigateToToday }) => {
   const [currentDateStr, setCurrentDateStr] = useState<string>('');
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
+  const [currentWeekdayStr, setCurrentWeekdayStr] = useState<string>('');
   const [todayEntry, setTodayEntry] = useState<ShiftEntry | undefined>(undefined);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       
-      // Get Persian Date String matching our data format: YYYY/MM/DD
-      const dateOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
-      const persianDate = now.toLocaleDateString('fa-IR-u-nu-latn', dateOptions);
+      // Get Persian Date & Time strictly in Asia/Tehran timezone
+      const persianDate = getTodayPersianDateStr(now);
       setCurrentDateStr(persianDate);
-
-      // Get Time
-      const timeOptions: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
-      setCurrentTimeStr(now.toLocaleTimeString('fa-IR', timeOptions));
+      setCurrentTimeStr(getTodayPersianTimeStr(now));
+      setCurrentWeekdayStr(getTodayPersianWeekday(now));
 
       const entry = schedule.find(s => s.date === persianDate);
       setTodayEntry(entry);
     };
 
     updateTime();
-    const timer = setInterval(updateTime, 60000); 
+    const timer = setInterval(updateTime, 10000); 
 
     return () => clearInterval(timer);
   }, [schedule]);
@@ -49,10 +52,10 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
         <div className="flex flex-col items-center md:items-start gap-2 min-w-[200px]">
            <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-             وضعیت زنده
+             وضعیت زنده (تهران)
            </div>
            <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mt-2 text-center md:text-right">
-             {new Date().toLocaleDateString('fa-IR', { weekday: 'long' })}
+             {currentWeekdayStr || 'سه‌شنبه'}
            </h2>
            
            {/* LTR Container: Icon Date | Icon Time */}
@@ -97,8 +100,16 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule }) => {
            ) : (
              <div className="flex flex-col items-center justify-center text-center py-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 h-full">
                <Calendar size={40} className="text-slate-300 mb-2" />
-               <p className="text-slate-500 font-medium">برای تاریخ امروز ({toPersianDigits(currentDateStr)}) برنامه‌ای ثبت نشده است.</p>
-               <p className="text-xs text-slate-400 mt-1">ممکن است تقویم به سال ۱۴۰۴ تنظیم شده باشد.</p>
+               <p className="text-slate-500 font-medium">برای تاریخ امروز ({toPersianDigits(currentDateStr)}) شیفتی در دیتابیس ثبت نشده است.</p>
+               {onNavigateToToday && (
+                 <button 
+                   onClick={onNavigateToToday}
+                   className="mt-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition"
+                 >
+                   <span>مشاهده تقویم و شیفت‌های شهریور</span>
+                   <ArrowLeft size={14} />
+                 </button>
+               )}
              </div>
            )}
         </div>

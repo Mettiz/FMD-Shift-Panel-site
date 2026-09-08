@@ -2,16 +2,8 @@
 import React, { useRef, useState } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, Trash2, FileSpreadsheet, FileType, Loader2 } from 'lucide-react';
 import { AppData, Personnel, ShiftEntry } from '../types';
-import * as XLSX from 'xlsx';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// Fix for pdfjs-dist import in browser environments (handling default export)
-const pdfjs: any = (pdfjsLib as any).default || pdfjsLib;
-
-// Configure PDF Worker safely
-if (pdfjs && pdfjs.GlobalWorkerOptions) {
-    pdfjs.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-}
+// NOTE: libraries are imported dynamically to avoid initial load errors
 
 interface DataManagementProps {
   currentData: AppData;
@@ -110,6 +102,10 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
       setIsProcessing(true);
 
       try {
+          // Dynamic Import for XLSX
+          // @ts-ignore
+          const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+
           const data = await file.arrayBuffer();
           const workbook = XLSX.read(data);
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -122,19 +118,15 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
           const parsedShifts: ShiftEntry[] = [];
           
           // Basic heuristic to find columns
-          // We assume row 0 is header, but we iterate rows to find data looking like dates
           const dateRegex = /^14\d{2}\/\d{2}\/\d{2}$/;
 
-          // Find column indices based on header keywords or assume positions
           let headerRowIdx = 0;
           let dateCol = 0, dayCol = 1, dayShiftCol = 2, nightShiftCol = 3, supCol = 4;
           
-          // Try to locate header row
           rawData.some((row, idx) => {
              const rowStr = row.join(' ').toLowerCase();
              if (rowStr.includes('تاریخ') || rowStr.includes('date')) {
                  headerRowIdx = idx;
-                 // Map columns dynamically
                  row.forEach((cell: any, cIdx: number) => {
                      const val = String(cell).trim();
                      if (val.includes('تاریخ')) dateCol = cIdx;
@@ -148,15 +140,11 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
              return false;
           });
 
-          // Iterate data rows
           for (let i = headerRowIdx + 1; i < rawData.length; i++) {
               const row = rawData[i];
               if (!row || row.length === 0) continue;
 
               let dateStr = row[dateCol] ? String(row[dateCol]).trim() : '';
-              
-              // Handle Excel Serial Dates if necessary (unlikely for Persian dates stored as string, but possible)
-              // Just assuming string format '1404/09/01' for simplicity as this is standard in Iran systems
               
               if (!dateRegex.test(dateStr)) continue;
 
@@ -172,7 +160,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
                   dayShiftPerson: dayP || 'نامشخص',
                   nightShiftPerson: nightP || 'نامشخص',
                   onCallPerson: supP || 'نامشخص',
-                  isHoliday: dayName === 'جمعه' // Simple default
+                  isHoliday: dayName === 'جمعه'
               });
           }
 
@@ -194,43 +182,41 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
       setIsProcessing(true);
 
       try {
+          // Dynamic Import for PDFJS
+          // @ts-ignore
+          const pdfjsLib = await import('https://esm.sh/pdfjs-dist@3.11.174');
+          const pdfjs: any = (pdfjsLib as any).default || pdfjsLib;
+          
+          if (pdfjs && pdfjs.GlobalWorkerOptions) {
+             pdfjs.GlobalWorkerOptions.workerSrc = 'https://esm.sh/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+          }
+
           const arrayBuffer = await file.arrayBuffer();
-          // Use the robust pdfjs import
           const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
           let fullText = '';
 
           for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
-              // Extract text items and join with spaces
               const pageText = textContent.items.map((item: any) => item.str).join(' ');
               fullText += pageText + '\n';
           }
 
-          // Parsing Logic for PDF Text
-          // We look for lines containing Date (YYYY/MM/DD) and try to grab names around it.
-          // This is "Best Effort"
           const parsedShifts: ShiftEntry[] = [];
-          
-          // Regex to find date: 14xx/xx/xx
-          // We split by date to find chunks
           const dateRegexGlobal = /14\d{2}\/\d{2}\/\d{2}/g;
           const dates = fullText.match(dateRegexGlobal);
           
           if (!dates || dates.length === 0) throw new Error('هیچ تاریخی در فایل PDF یافت نشد.');
 
-          // Split text roughly by dates to associate names
           const words = fullText.split(/\s+/);
           
           for (let i = 0; i < words.length; i++) {
               const word = words[i];
               if (dateRegexGlobal.test(word)) {
-                  // Found a date.
-                  // We will just create an entry. If names are missing, user edits manually.
                   parsedShifts.push({
                       id: Math.random(),
                       date: word,
-                      dayName: 'نامشخص', // Hard to parse from unstructured text reliably
+                      dayName: 'نامشخص',
                       dayShiftPerson: 'نامشخص',
                       nightShiftPerson: 'نامشخص',
                       onCallPerson: 'نامشخص',
@@ -248,7 +234,7 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
 
       } catch (err) {
           console.error(err);
-          alert('خطا در پردازش PDF. لطفا از فایل اکسل استفاده کنید که دقیق‌تر است.');
+          alert('خطا در پردازش PDF. ممکن است فایل نامعتبر باشد یا کتابخانه لود نشده باشد.');
       } finally {
           setIsProcessing(false);
           if (pdfInputRef.current) pdfInputRef.current.value = '';
@@ -335,7 +321,6 @@ export const DataManagement: React.FC<DataManagementProps> = ({ currentData, onI
         </div>
       )}
       
-      {/* Hidden Inputs */}
       <input type="file" ref={fileInputRef} onChange={handleJsonFileChange} accept=".json" className="hidden" />
       <input type="file" ref={excelInputRef} onChange={handleExcelChange} accept=".xlsx, .xls" className="hidden" />
       <input type="file" ref={pdfInputRef} onChange={handlePdfChange} accept=".pdf" className="hidden" />

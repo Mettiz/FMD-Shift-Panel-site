@@ -488,7 +488,7 @@ export const PersonalReportModal: React.FC<PersonalReportModalProps> = ({
                                          {headerDateRange}
                                      </div>
                                      <div className="text-sm font-bold text-black mt-2">
-                                         تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
+                                         تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran' }))}
                                      </div>
                                  </div>
                              </div>

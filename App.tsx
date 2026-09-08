@@ -7,6 +7,7 @@ import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData } from './types';
 import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus } from 'lucide-react';
+import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
 
 const MONTHS = [
     { name: 'فروردین', code: '01' },
@@ -38,7 +39,37 @@ const App: React.FC = () => {
   const [schedule, setSchedule] = useState<ShiftEntry[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
-      return saved ? JSON.parse(saved) : SCHEDULE_DATA;
+      let list: ShiftEntry[] = saved ? JSON.parse(saved) : SCHEDULE_DATA;
+
+      // Ensure current year/month entries from SCHEDULE_DATA are available
+      const currentToday = getTodayPersianParts();
+      const currentPrefix = `${currentToday.year}/${currentToday.month}/`;
+      const hasCurrentMonth = list.some(s => s.date.startsWith(currentPrefix));
+      if (!hasCurrentMonth) {
+        const todayEntries = SCHEDULE_DATA.filter(s => s.date.startsWith(currentPrefix));
+        if (todayEntries.length > 0) {
+          list = [...list, ...todayEntries];
+        }
+      }
+
+      // Always guarantee each entry's dayName is strictly mathematically accurate for the Iranian calendar
+      list = list.map(entry => {
+        const parts = entry.date.split('/');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const d = parseInt(parts[2], 10);
+          if (y && m && d) {
+            const correctDay = getDayNameForJalali(y, m, d);
+            if (entry.dayName !== correctDay) {
+              return { ...entry, dayName: correctDay };
+            }
+          }
+        }
+        return entry;
+      });
+
+      return list;
     } catch (error) {
       console.error("Failed to load schedule from storage", error);
       return SCHEDULE_DATA;
@@ -130,21 +161,40 @@ const App: React.FC = () => {
   }, [unlockedMonths]);
 
 
-  // Calendar State
-  const [currentYear, setCurrentYear] = useState(1404);
-  const [monthIndex, setMonthIndex] = useState(8); // Default to Azar (Index 8 in new sorted list) or based on data
+  // Calendar State - Defaults to today's Iranian date
+  const [currentYear, setCurrentYear] = useState(() => {
+    const today = getTodayPersianParts();
+    return today.year || 1405;
+  });
+  const [monthIndex, setMonthIndex] = useState(() => {
+    const today = getTodayPersianParts();
+    return today.monthIndex >= 0 ? today.monthIndex : 5;
+  });
   
-  // Initialize monthIndex based on schedule data to avoid mismatch
+  // Initialize monthIndex based on today or schedule data
   useEffect(() => {
-      if (schedule.length > 0) {
-          // Find the month of the first entry usually, or set a default
-          // For now, we keep it simple or default to Azar (09) which is index 8
-          const firstDate = schedule[0].date; // e.g., 1404/09/01
-          const mCode = firstDate.split('/')[1];
-          const idx = MONTHS.findIndex(m => m.code === mCode);
-          if (idx !== -1) setMonthIndex(idx);
-      }
+    const today = getTodayPersianParts();
+    const currentMonthPrefix = `${today.year}/${today.month}/`;
+    const hasTodayMonth = schedule.some(s => s.date.startsWith(currentMonthPrefix));
+    
+    if (hasTodayMonth) {
+      setCurrentYear(today.year);
+      setMonthIndex(today.monthIndex);
+    } else if (schedule.length > 0) {
+      const firstDate = schedule[0].date;
+      const [y, m] = firstDate.split('/');
+      const yNum = parseInt(y, 10);
+      const idx = MONTHS.findIndex(mObj => mObj.code === m);
+      if (yNum) setCurrentYear(yNum);
+      if (idx !== -1) setMonthIndex(idx);
+    }
   }, []);
+
+  const handleNavigateToToday = () => {
+    const today = getTodayPersianParts();
+    setCurrentYear(today.year);
+    setMonthIndex(today.monthIndex);
+  };
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   
@@ -551,6 +601,7 @@ const App: React.FC = () => {
             isLocked={isCurrentMonthLocked}
             onToggleLock={handleToggleLock}
             onRegenerate={handleRegenerate}
+            onNavigateToToday={handleNavigateToToday}
           />
         ) : (
           <div className="relative min-h-[80vh]">

@@ -55,6 +55,7 @@ export interface DashboardProps {
   isLocked: boolean;
   onToggleLock: () => void;
   onRegenerate: () => void; // Added for Auto Arrange
+  onNavigateToToday?: () => void;
 }
 
 export interface AppData {

@@ -1,6 +1,7 @@
 
 import { ShiftEntry, SHIFT_WEIGHTS, Personnel } from '../types';
 import { OFFICIAL_HOLIDAYS } from '../constants';
+import { getDayNameForJalali } from './persianDate';
 
 export const INITIAL_STAFF: Personnel[] = [
   { name: 'مهندس لسانی', roles: ['Shift'], isActive: true },
@@ -89,9 +90,8 @@ export const generateNextMonth = (
   let prevNightPerson = lastEntry ? lastEntry.nightShiftPerson : '';
 
   for (let i = 0; i < daysInMonth; i++) {
-    const dayOfWeekIdx = (startDayIndex + i) % 7;
-    const dayName = WEEK_DAYS[dayOfWeekIdx];
-    const isFriday = dayOfWeekIdx === 6;
+    const dayName = getDayNameForJalali(nextYear, parseInt(nextMonthCode, 10), currentDateIdx);
+    const isFriday = dayName === 'جمعه';
     const dateStr = `${nextYear}/${nextMonthCode}/${String(currentDateIdx).padStart(2, '0')}`;
     const isHoliday = isFriday || OFFICIAL_HOLIDAYS.includes(dateStr);
     

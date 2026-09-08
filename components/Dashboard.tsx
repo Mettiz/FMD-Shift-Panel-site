@@ -1,11 +1,12 @@
 
 import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
-import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2 } from 'lucide-react';
+import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Sector } from 'recharts';
 import { ShiftUserCard } from './ShiftUserCard';
 import { TodayHero } from './TodayHero';
 import { StatsCard } from './StatsCard';
+import { getTodayPersianDateStr } from '../utils/persianDate';
 
 // --- Constants for Date Selectors ---
 const PERSIAN_MONTHS = [
@@ -117,8 +118,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenReport,
   isLocked,
   onToggleLock,
-  onRegenerate
+  onRegenerate,
+  onNavigateToToday
 }) => {
+  const todayPersianDate = useMemo(() => getTodayPersianDateStr(), []);
   const [filterPerson, setFilterPerson] = useState<string | 'All'>('All');
   
   // --- Date Range Filter State ---
@@ -266,7 +269,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="dashboard-container space-y-6">
       
       {/* Today Hero (Live Status) */}
-      <TodayHero schedule={fullSchedule} />
+      <TodayHero schedule={fullSchedule} onNavigateToToday={onNavigateToToday} />
 
       {/* Header & Controls */}
       <div className="flex flex-col gap-4 no-print">
@@ -285,14 +288,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto justify-center bg-slate-50 p-1.5 rounded-xl border border-slate-100">
-               <button onClick={onPrevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50">
-                  <ChevronRight size={20} />
-               </button>
-               <span className="font-bold text-slate-800 text-sm min-w-[100px] text-center">{monthName} {toPersianDigits(year)}</span>
-               <button onClick={onNextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50">
-                  <ChevronLeft size={20} />
-               </button>
+            <div className="flex items-center gap-2 w-full md:w-auto justify-center flex-wrap">
+               {onNavigateToToday && (
+                  <button 
+                    onClick={onNavigateToToday}
+                    className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+                    title="مشاهده ماه جاری و شیفت‌های امروز"
+                  >
+                    <CalendarCheck size={16} className="text-emerald-600" />
+                    <span>امروز ({toPersianDigits(todayPersianDate)})</span>
+                  </button>
+               )}
+               <div className="flex items-center gap-2 justify-center bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                  <button onClick={onPrevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50" title="ماه قبل">
+                     <ChevronRight size={20} />
+                  </button>
+                  <span className="font-bold text-slate-800 text-sm min-w-[100px] text-center">{monthName} {toPersianDigits(year)}</span>
+                  <button onClick={onNextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-slate-600 transition disabled:opacity-50" title="ماه بعد">
+                     <ChevronLeft size={20} />
+                  </button>
+               </div>
             </div>
          </div>
 
@@ -460,7 +475,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         تعداد پرسنل: {toPersianDigits(shiftWorkers.length)} نفر
                      </div>
                      <span className="text-[10px] font-bold text-black">
-                        تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR'))}
+                        تاریخ گزارش: {toPersianDigits(new Date().toLocaleDateString('fa-IR', { timeZone: 'Asia/Tehran' }))}
                      </span>
                 </div>
             </div>
@@ -488,12 +503,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                    </thead>
                    <tbody className="divide-y divide-slate-100 print:divide-black">
                      {filteredSchedule.map((entry) => {
+                       const isToday = entry.date === todayPersianDate;
                        const isFriday = entry.dayName === 'جمعه';
                        const isHoliday = entry.isHoliday;
                        const isThursday = entry.dayName === 'پنج‌شنبه';
                        
                        let rowClass = 'hover:bg-slate-50 transition-colors'; 
-                       if (isFriday || isHoliday) {
+                       if (isToday) {
+                           rowClass = 'bg-emerald-50/90 hover:bg-emerald-100 text-emerald-950 font-semibold ring-2 ring-emerald-500/50 print:bg-white print:text-black';
+                       } else if (isFriday || isHoliday) {
                            rowClass = 'bg-red-50 hover:bg-red-100 text-red-900 print:bg-gray-200 print:text-black';
                        } else if (isThursday) {
                            rowClass = 'bg-[#f3e8ff] hover:bg-purple-100 text-purple-900 print:bg-white print:text-black';
@@ -501,13 +519,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                        return (
                          <tr key={entry.id} className={rowClass}>
-                           <td className={`p-4 print:p-0.5 border border-slate-200 print:border-black font-bold ${isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
+                           <td className={`p-4 print:p-0.5 border border-slate-200 print:border-black font-bold ${isToday ? 'text-emerald-800 font-black' : isFriday || isHoliday ? 'text-red-600 print:text-black' : ''}`}>
                               <div className="flex flex-col items-center justify-center">
                                   <span>{entry.dayName}</span>
                               </div>
                            </td>
                            <td className="p-4 print:p-0.5 border border-slate-200 print:border-black text-slate-700 print:text-black font-bold">
-                              <span>{toPersianDigits(entry.date)}</span>
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                 <span>{toPersianDigits(entry.date)}</span>
+                                 {isToday && (
+                                   <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full shadow-xs print:hidden">
+                                     امروز
+                                   </span>
+                                 )}
+                              </div>
                            </td>
                            <td className="p-2 print:p-0.5 border border-slate-200 print:border-black">
                               <div className="print:hidden">
@@ -546,13 +571,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {/* Mobile Cards */}
             <div className="md:hidden space-y-4 print:hidden">
               {filteredSchedule.map(entry => {
+                 const isToday = entry.date === todayPersianDate;
                  const isFriday = entry.dayName === 'جمعه';
                  const isHoliday = entry.isHoliday;
                  const isThursday = entry.dayName === 'پنج‌شنبه';
                  
                  let cardBg = 'bg-white';
                  let borderColor = 'border-slate-200';
-                 if (isFriday || isHoliday) {
+                 if (isToday) {
+                     cardBg = 'bg-emerald-50/70';
+                     borderColor = 'border-emerald-500 ring-1 ring-emerald-400';
+                 } else if (isFriday || isHoliday) {
                      cardBg = 'bg-red-50';
                      borderColor = 'border-red-200';
                  } else if (isThursday) {
@@ -564,8 +593,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div key={entry.id} className={`${cardBg} rounded-xl shadow-sm border ${borderColor} p-4`}>
                     <div className="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
                        <div className="flex items-center gap-2">
-                          <span className={`font-black ${isFriday || isHoliday ? 'text-red-600' : 'text-slate-700'}`}>{entry.dayName}</span>
-                          <span className="text-xs text-slate-400 font-bold">{toPersianDigits(entry.date)}</span>
+                          <span className={`font-black ${isToday ? 'text-emerald-800' : isFriday || isHoliday ? 'text-red-600' : 'text-slate-700'}`}>{entry.dayName}</span>
+                          <span className="text-xs text-slate-500 font-bold">{toPersianDigits(entry.date)}</span>
+                          {isToday && (
+                            <span className="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full shadow-xs">
+                              امروز
+                            </span>
+                          )}
                        </div>
                        {entry.isHoliday && <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">تعطیل</span>}
                     </div>
