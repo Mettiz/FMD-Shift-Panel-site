@@ -845,35 +845,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {/* 1. Official Header Frame */}
                 <div className="border-2 border-slate-800 rounded-xl p-3 bg-white mb-2 shadow-2xs">
                     <div className="grid grid-cols-3 items-center gap-2">
-                        {/* Right: Organization & Department */}
-                        <div className="flex flex-col items-start text-right">
-                            <div className="flex items-center gap-2.5 mb-1">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm tracking-wider shadow-xs shrink-0" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-                                    FMD
-                                </div>
-                                <div>
-                                    <h2 className="text-sm font-black text-slate-900 leading-tight">سامانه مدیریت شیفت تولید</h2>
-                                    <p className="text-[9.5pt] font-extrabold text-slate-700 leading-tight">مرکز مدیریت و هماهنگی عملیات</p>
-                                </div>
+                        {/* Right: Organization */}
+                        <div className="flex items-center gap-2.5 text-right">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm tracking-wider shadow-xs shrink-0" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                                FMD
                             </div>
-                            <p className="text-[8.5pt] font-bold text-slate-600">واحد تولید و پایش ۲۴/۷ سامانه‌ها</p>
-                            <span className="text-[7.5pt] font-semibold text-slate-500 mt-0.5">اداره پایش نوبت‌کاری پرسنل</span>
+                            <div>
+                                <h2 className="text-sm font-black text-slate-900 leading-tight">سامانه مدیریت شیفت تولید</h2>
+                            </div>
                         </div>
 
-                        {/* Center: Main Document Title & Period */}
+                        {/* Center: Main Document Title */}
                         <div className="flex flex-col items-center justify-center text-center">
-                            <div className="inline-block bg-slate-900 text-white px-3 py-0.5 rounded-full text-[8.5pt] font-black tracking-wide mb-1">
+                            <h1 className="text-lg font-black text-slate-900">
                                 جدول زمان‌بندی و برنامه شیفت کاری
-                            </div>
-                            <h1 className="text-xl font-black text-slate-900">
-                                {viewMode === 'RANGE' && appliedFilter 
-                                   ? `بازه ${toPersianDigits(appliedFilter.from.year)}/${toPersianDigits(appliedFilter.from.month)}/${toPersianDigits(appliedFilter.from.day)} تا ${toPersianDigits(appliedFilter.to.year)}/${toPersianDigits(appliedFilter.to.month)}/${toPersianDigits(appliedFilter.to.day)}`
-                                   : `${monthName} ماه ${toPersianDigits(year)}`
-                                }
                             </h1>
-                            <div className="flex items-center gap-1.5 text-[8pt] font-bold text-slate-600 mt-0.5">
-                                <span>پوشش نوبت‌کاری:</span>
-                                <span>روز (۱۹ - ۰۸) | شب (۰۸ - ۱۹) | سرپرست On-Call</span>
+                            <div className="text-xs font-extrabold text-slate-700 mt-1">
+                                {`${monthName} ماه ${toPersianDigits(year)}`}
                             </div>
                         </div>
 
@@ -1059,58 +1047,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </tbody>
                 </table>
 
-                {/* 4. Signatures & Official Approvals Box */}
-                <div className="mt-2.5 border-2 border-slate-800 rounded-xl p-2.5 bg-white" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                    <div className="text-[8pt] font-black text-slate-700 mb-1.5 border-b border-slate-200 pb-1 flex items-center justify-between">
-                        <span>گردش کار اداری و تأییدیه‌های سازمانی:</span>
-                        <span className="text-[7pt] text-slate-500 font-normal">این سند بدون امضای سه‌گانه فاقد اعتبار اجرایی است.</span>
+                {/* 4. Single Unit Supervisor Approval Box */}
+                <div className="mt-3 flex items-end justify-between" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                    <div className="text-[7.5pt] text-slate-500 max-w-md">
+                        <p className="font-bold text-slate-700 mb-0.5">ملاحظات اداری:</p>
+                        <p>این سند مبنای حضور، غیاب و صدور کارکرد ماهانه پرسنل بوده و هرگونه جابجایی صرفاً با تأیید کتبی سرپرست معتبر است.</p>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                        {/* 1. Planner */}
-                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
-                            <div>
-                                <span className="text-[8pt] font-black text-slate-800 block">تنظیم‌کننده برنامه</span>
-                                <span className="text-[7pt] text-slate-500">کارشناس برنامه‌ریزی شیفت</span>
-                            </div>
-                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
-                                <span>امضا: ....................</span>
-                                <span>تاریخ: ...../...../.....</span>
-                            </div>
+                    <div className="w-64 border-2 border-slate-800 rounded-xl p-2.5 bg-white text-center shadow-2xs">
+                        <div className="text-[9pt] font-black text-slate-900 mb-1">
+                            تأییدیه سرپرست واحد
                         </div>
-
-                        {/* 2. Shift Supervisor */}
-                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
-                            <div>
-                                <span className="text-[8pt] font-black text-slate-800 block">بررسی و هماهنگی</span>
-                                <span className="text-[7pt] text-slate-500">سرپرست مرکز عملیات شیفت</span>
-                            </div>
-                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
-                                <span>امضا: ....................</span>
-                                <span>تاریخ: ...../...../.....</span>
-                            </div>
+                        <div className="text-[7.5pt] text-slate-600 mb-3">
+                            نام و نام خانوادگی: .............................
                         </div>
-
-                        {/* 3. Division Manager */}
-                        <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/60 flex flex-col justify-between h-20">
-                            <div>
-                                <span className="text-[8pt] font-black text-slate-800 block">تأیید نهایی و ابلاغ</span>
-                                <span className="text-[7pt] text-slate-500">مدیر واحد تولید و عملیات</span>
-                            </div>
-                            <div className="border-t border-dashed border-slate-400 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
-                                <span>امضا: ....................</span>
-                                <span>تاریخ: ...../...../.....</span>
-                            </div>
+                        <div className="border-t border-dashed border-slate-300 pt-1 flex justify-between items-center text-[7pt] text-slate-600 px-1">
+                            <span>تاریخ: ..... / ..... / ۱۴۰</span>
+                            <span>امضا: ....................</span>
                         </div>
                     </div>
                 </div>
 
-                {/* 5. Official Footer Legal Note */}
-                <div className="mt-1.5 flex items-center justify-between text-[7pt] font-medium text-slate-500 px-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                {/* 5. Official Footer */}
+                <div className="mt-1.5 flex items-center justify-end text-[7pt] font-bold text-slate-500 px-1" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                     <p>
-                        ملاحظات اداری: این سند مبنای حضور، غیاب و صدور کارکرد ماهانه پرسنل بوده و هرگونه جابجایی صرفاً با تأیید کتبی سرپرست معتبر است.
-                    </p>
-                    <p className="font-bold text-slate-700">
                         سامانه یکپارچه مدیریت شیفت ShiftFlow
                     </p>
                 </div>
