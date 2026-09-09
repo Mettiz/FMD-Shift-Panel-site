@@ -1,4 +1,7 @@
 
+/**
+ * Print Settings Modal - v1.0.1
+ */
 import React, { useState } from 'react';
 import { X, Printer, CalendarRange, Calendar, ChevronDown } from 'lucide-react';
 

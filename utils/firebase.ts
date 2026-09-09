@@ -1,11 +1,18 @@
-import { initializeApp } from 'firebase/app';
+/**
+ * Firebase Firestore Cloud Sync Module - v1.0.1
+ */
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
-  getFirestore, 
+  initializeFirestore, 
+  getFirestore,
+  persistentLocalCache, 
+  persistentMultipleTabManager,
   doc, 
   onSnapshot, 
   setDoc, 
   getDoc,
-  Unsubscribe 
+  Unsubscribe,
+  Firestore
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { ShiftEntry, Personnel, PublishedRange } from '../types';
@@ -19,18 +26,46 @@ export interface CloudRosterState {
   updatedAt: string;
 }
 
-const app = initializeApp(firebaseConfig);
-export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+
+const isBrowser = typeof window !== 'undefined';
+const hasIndexedDB = isBrowser && typeof indexedDB !== 'undefined';
+
+let firestoreInstance: Firestore;
+
+try {
+  firestoreInstance = initializeFirestore(
+    app,
+    {
+      // Force long-polling in browser environments:
+      // Resolves "@firebase/firestore: Could not reach Cloud Firestore backend. Connection failed 1 times. [code=unavailable]"
+      // caused by WebChannel streaming duplex connections getting blocked or buffered by proxies/firewalls.
+      experimentalForceLongPolling: isBrowser,
+      localCache: hasIndexedDB
+        ? persistentLocalCache({
+            tabManager: persistentMultipleTabManager(),
+          })
+        : undefined,
+    },
+    firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+      ? firebaseConfig.firestoreDatabaseId
+      : undefined
+  );
+} catch {
+  // If already initialized (e.g. during fast refresh or HMR), reuse existing instance
+  firestoreInstance = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 const ROSTER_DOC_PATH = 'roster_state';
 const ROSTER_DOC_ID = 'current';
 
 /**
  * Subscribes to real-time changes of the roster in Firestore.
- * This ensures that whenever the manager applies changes, all visitors and browsers
- * immediately receive the latest roster state without needing to refresh.
+ * Automatically recovers and reconnects when the network comes back online.
  */
 export function subscribeToCloudRoster(
   onUpdate: (data: CloudRosterState) => void,
@@ -38,25 +73,79 @@ export function subscribeToCloudRoster(
   onError?: (error: unknown) => void
 ): Unsubscribe {
   const docRef = doc(db, ROSTER_DOC_PATH, ROSTER_DOC_ID);
+  let unsub: Unsubscribe | null = null;
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let isCancelled = false;
 
-  return onSnapshot(
-    docRef,
-    (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data() as CloudRosterState;
-        onUpdate(data);
-      } else {
-        // Document does not exist yet on cloud, signal to seed initial data
-        if (onInitialEmpty) {
-          onInitialEmpty();
+  const startListening = () => {
+    if (isCancelled) return;
+
+    try {
+      unsub = onSnapshot(
+        docRef,
+        { includeMetadataChanges: false },
+        (snapshot) => {
+          if (isCancelled) return;
+          if (snapshot.exists()) {
+            const data = snapshot.data() as CloudRosterState;
+            onUpdate(data);
+          } else {
+            if (onInitialEmpty) {
+              onInitialEmpty();
+            }
+          }
+        },
+        (error) => {
+          if (isCancelled) return;
+          if (onError) onError(error);
+
+          // If disconnected/unavailable, schedule automatic reconnection
+          if (retryTimer) clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => {
+            if (!isCancelled) {
+              startListening();
+            }
+          }, 5000);
         }
-      }
-    },
-    (error) => {
-      console.warn('Firestore subscription error:', error);
-      if (onError) onError(error);
+      );
+    } catch (err) {
+      if (onError) onError(err);
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
+        if (!isCancelled) {
+          startListening();
+        }
+      }, 5000);
     }
-  );
+  };
+
+  startListening();
+
+  // Reconnect immediately when browser detects online status
+  const handleOnline = () => {
+    if (!isCancelled) {
+      if (unsub) {
+        try { unsub(); } catch {}
+      }
+      if (retryTimer) clearTimeout(retryTimer);
+      startListening();
+    }
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', handleOnline);
+  }
+
+  return () => {
+    isCancelled = true;
+    if (retryTimer) clearTimeout(retryTimer);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', handleOnline);
+    }
+    if (unsub) {
+      try { unsub(); } catch {}
+    }
+  };
 }
 
 /**

@@ -1,4 +1,8 @@
 
+/**
+ * Final ShiftFlow - Production Roster v1.0.1
+ * Cloud-synchronized production roster application
+ */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { PersonalReportModal } from './components/PersonalReportModal';
@@ -276,8 +280,13 @@ const App: React.FC = () => {
           isRemoteUpdateRef.current = false;
         }, 150);
       },
-      // If Firestore doc does not exist yet, seed it with current local state
+      // If Firestore doc does not exist yet, seed it with current local state (only if manager)
       () => {
+        if (!isOwner) {
+          setSyncStatus('synced');
+          isInitialLoadCompletedRef.current = true;
+          return;
+        }
         saveCloudRoster({
           schedule,
           personnelList,
@@ -289,14 +298,13 @@ const App: React.FC = () => {
             setSyncStatus('synced');
             isInitialLoadCompletedRef.current = true;
           })
-          .catch((err) => {
-            console.error('Failed to initialize cloud roster:', err);
+          .catch(() => {
             setSyncStatus('offline');
             isInitialLoadCompletedRef.current = true;
           });
       },
-      (error) => {
-        console.error('Cloud roster subscription error:', error);
+      () => {
+        // Offline or connection interrupted; app seamlessly uses local cache
         setSyncStatus('offline');
         isInitialLoadCompletedRef.current = true;
       }
@@ -305,9 +313,9 @@ const App: React.FC = () => {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [isOwner]);
 
-  // Save to Cloud & LocalStorage whenever changes occur (only when triggered locally, e.g. by admin)
+  // Save to Cloud & LocalStorage whenever changes occur (only when triggered locally by owner/admin)
   useEffect(() => {
     // Local storage backup
     localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
@@ -320,6 +328,10 @@ const App: React.FC = () => {
     }
     // Don't save before initial subscription has received state
     if (!isInitialLoadCompletedRef.current) {
+      return;
+    }
+    // Only administrators/managers who actually edit should write to cloud
+    if (!isOwner) {
       return;
     }
 
@@ -340,8 +352,7 @@ const App: React.FC = () => {
         .then(() => {
           setSyncStatus('synced');
         })
-        .catch((err) => {
-          console.error('Failed to sync to cloud:', err);
+        .catch(() => {
           setSyncStatus('offline');
         });
     }, 400);
@@ -351,7 +362,7 @@ const App: React.FC = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword]);
+  }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword, isOwner]);
 
   // --- MANUAL SAVE & APPLY CHANGES (SETTINGS) ---
   const [isSavingChanges, setIsSavingChanges] = useState(false);

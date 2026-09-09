@@ -1,3 +1,4 @@
+// Vite Build Configuration - Final ShiftFlow v1.0.1
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';

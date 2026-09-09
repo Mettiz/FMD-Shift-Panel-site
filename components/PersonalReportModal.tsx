@@ -1,4 +1,7 @@
 
+/**
+ * Personal Shift Report Modal - v1.0.1
+ */
 import React, { useMemo, useState, useEffect } from 'react';
 import { ShiftEntry, PersonName } from '../types';
 import { X, Printer, FileDown, Filter, ChevronDown, Calculator } from 'lucide-react';

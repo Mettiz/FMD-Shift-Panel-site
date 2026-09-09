@@ -1,4 +1,7 @@
 
+/**
+ * Shift Swap Modal - v1.0.1
+ */
 import React, { useState } from 'react';
 import { ShiftEntry, PersonName } from '../types';
 import { validateSwap } from '../utils/scheduler';

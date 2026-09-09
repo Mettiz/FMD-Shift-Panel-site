@@ -1,4 +1,7 @@
 
+/**
+ * Shift Scheduler & Generation Engine - v1.0.1
+ */
 import { ShiftEntry, SHIFT_WEIGHTS, Personnel } from '../types';
 import { OFFICIAL_HOLIDAYS } from '../constants';
 import { getDayNameForJalali } from './persianDate';

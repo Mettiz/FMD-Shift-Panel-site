@@ -1,4 +1,7 @@
 
+/**
+ * Today Hero Component - v1.0.1
+ */
 import React, { useEffect, useState } from 'react';
 import { ShiftEntry } from '../types';
 import { ShiftUserCard } from './ShiftUserCard';

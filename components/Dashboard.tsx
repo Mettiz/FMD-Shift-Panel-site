@@ -1,4 +1,7 @@
 
+/**
+ * ShiftFlow Dashboard Component - v1.0.1
+ */
 import React, { useMemo, useState } from 'react';
 import { SHIFT_WEIGHTS, StatEntry, ShiftEntry, DashboardProps } from '../types';
 import { Calendar, Moon, Filter, ChevronRight, ChevronLeft, Lock, Unlock, Sun, RefreshCw, Printer, FileText, CalendarRange, XCircle, X, Search, ChevronDown, ChevronUp, Scale, Activity, Trophy, Clock, Users, CheckCircle2, CalendarCheck, Crown, ShieldCheck, Globe } from 'lucide-react';

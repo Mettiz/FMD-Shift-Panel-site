@@ -1,4 +1,7 @@
 
+/**
+ * Data Management Component - v1.0.1
+ */
 import React, { useRef, useState } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, Trash2, FileSpreadsheet, FileType, Loader2 } from 'lucide-react';
 import { AppData, Personnel, ShiftEntry } from '../types';

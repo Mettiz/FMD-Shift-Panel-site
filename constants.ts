@@ -1,4 +1,7 @@
 
+/**
+ * ShiftFlow System Constants - v1.0.1
+ */
 import { ShiftEntry } from './types';
 
 export const OFFICIAL_HOLIDAYS = [

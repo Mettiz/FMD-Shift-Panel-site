@@ -1,4 +1,7 @@
 
+/**
+ * ShiftFlow Core Types - v1.0.1
+ */
 export type PersonName = string;
 export type OnCallName = string;
 export type Role = 'Shift' | 'Supervisor';

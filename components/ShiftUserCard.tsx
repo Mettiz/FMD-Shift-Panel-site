@@ -1,4 +1,7 @@
 
+/**
+ * Shift User Badge Card - v1.0.1
+ */
 import React from 'react';
 import { Sun, Moon, CheckCircle2 } from 'lucide-react';
 

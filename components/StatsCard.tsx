@@ -1,3 +1,6 @@
+/**
+ * Stats Card Component - v1.0.1
+ */
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 

@@ -1,5 +1,6 @@
 /**
- * Persian (Jalali) Date Utilities with strict Asia/Tehran timezone support
+ * Persian (Jalali) Date Utilities - v1.0.1
+ * Strict Asia/Tehran timezone support
  */
 
 export const IRAN_TIMEZONE = 'Asia/Tehran';

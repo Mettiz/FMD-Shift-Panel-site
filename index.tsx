@@ -1,3 +1,7 @@
+/**
+ * Final ShiftFlow - Production Roster v1.0.1
+ * Released for GitHub & Vercel deployment
+ */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';

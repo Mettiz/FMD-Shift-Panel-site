@@ -1,3 +1,6 @@
+/**
+ * Personnel Color Utilities - v1.0.1
+ */
 import { Personnel } from '../types';
 
 export const PERSONNEL_COLOR_PALETTE: string[] = [
