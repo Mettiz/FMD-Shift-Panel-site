@@ -10,9 +10,9 @@ import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData, PublishedRange } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette, Cloud, CloudUpload, Wifi, RefreshCw } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, AlertTriangle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette, Cloud, CloudUpload, Wifi, RefreshCw } from 'lucide-react';
 import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
-import { PERSONNEL_COLOR_PALETTE, getNextPersonnelColor, getPersonColor } from './utils/personnelColors';
+import { getNextPersonnelColor, getPersonColor, ensureUniquePersonnelColors } from './utils/personnelColors';
 import { subscribeToCloudRoster, saveCloudRoster, resetCloudRoster } from './utils/firebase';
 
 const MONTHS = [
@@ -153,6 +153,7 @@ const App: React.FC = () => {
     } else {
       localStorage.removeItem(STORAGE_KEYS.PUBLISHED_RANGE);
     }
+    saveCloudRoster({ publishedRange: range }).catch(console.error);
   };
 
   // --- CHANGE PASSWORD MODAL STATE ---
@@ -174,6 +175,7 @@ const App: React.FC = () => {
         }
         setSettingsPassword('');
         setIsPasswordModalOpen(false);
+        setActiveTab('settings');
     } else {
         alert('رمز عبور اشتباه است.');
     }
@@ -210,6 +212,7 @@ const App: React.FC = () => {
 
       setAdminPassword(pwdForm.new);
       localStorage.setItem(STORAGE_KEYS.PASSWORD, pwdForm.new);
+      saveCloudRoster({ adminPassword: pwdForm.new }).catch(console.error);
       alert('رمز عبور با موفقیت تغییر کرد.');
       setChangePwdOpen(false);
       setPwdForm({ current: '', new: '', confirm: '' });
@@ -217,9 +220,24 @@ const App: React.FC = () => {
 
   // --- CLOUD SYNCHRONIZATION VIA FIRESTORE ---
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('syncing');
+  const [isCloudLoading, setIsCloudLoading] = useState<boolean>(() => {
+    try {
+      return !localStorage.getItem(STORAGE_KEYS.SCHEDULE);
+    } catch {
+      return true;
+    }
+  });
   const isRemoteUpdateRef = useRef(false);
   const isInitialLoadCompletedRef = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Safety fallback: Never keep the user waiting more than 3.5 seconds if network is lagging
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsCloudLoading(false);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Subscribe to real-time updates from Firestore
   useEffect(() => {
@@ -274,19 +292,15 @@ const App: React.FC = () => {
 
         setSyncStatus('synced');
         isInitialLoadCompletedRef.current = true;
+        setIsCloudLoading(false);
 
         // Reset remote update lock after state propagation
         setTimeout(() => {
           isRemoteUpdateRef.current = false;
         }, 150);
       },
-      // If Firestore doc does not exist yet, seed it with current local state (only if manager)
+      // If Firestore doc does not exist yet, seed it with current local state
       () => {
-        if (!isOwner) {
-          setSyncStatus('synced');
-          isInitialLoadCompletedRef.current = true;
-          return;
-        }
         saveCloudRoster({
           schedule,
           personnelList,
@@ -297,23 +311,26 @@ const App: React.FC = () => {
           .then(() => {
             setSyncStatus('synced');
             isInitialLoadCompletedRef.current = true;
+            setIsCloudLoading(false);
           })
           .catch(() => {
             setSyncStatus('offline');
             isInitialLoadCompletedRef.current = true;
+            setIsCloudLoading(false);
           });
       },
-      () => {
-        // Offline or connection interrupted; app seamlessly uses local cache
+      (error) => {
+        console.warn('Firestore subscription offline or waiting:', error);
         setSyncStatus('offline');
         isInitialLoadCompletedRef.current = true;
+        setIsCloudLoading(false);
       }
     );
 
     return () => {
       unsubscribe();
     };
-  }, [isOwner]);
+  }, []);
 
   // Save to Cloud & LocalStorage whenever changes occur (only when triggered locally by owner/admin)
   useEffect(() => {
@@ -331,7 +348,7 @@ const App: React.FC = () => {
       return;
     }
     // Only administrators/managers who actually edit should write to cloud
-    if (!isOwner) {
+    if (!isOwner && !isSettingsUnlocked) {
       return;
     }
 
@@ -352,7 +369,8 @@ const App: React.FC = () => {
         .then(() => {
           setSyncStatus('synced');
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('Cloud auto-save error:', err);
           setSyncStatus('offline');
         });
     }, 400);
@@ -362,7 +380,7 @@ const App: React.FC = () => {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword, isOwner]);
+  }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword, isOwner, isSettingsUnlocked]);
 
   // --- MANUAL SAVE & APPLY CHANGES (SETTINGS) ---
   const [isSavingChanges, setIsSavingChanges] = useState(false);
@@ -377,9 +395,49 @@ const App: React.FC = () => {
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // 1. Immediately persist to localStorage
-      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
-      localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(personnelList));
+      // 1. Ensure distinct non-duplicate colors for all personnel
+      const distinctPersonnel = ensureUniquePersonnelColors(personnelList);
+      setPersonnelList(distinctPersonnel);
+
+      // 2. Automatically synchronize supervisors with calendar and dashboard
+      const activeSupervisors = distinctPersonnel
+        .filter(p => p.roles.includes('Supervisor') && p.isActive)
+        .map(p => p.name);
+
+      let finalSchedule = schedule;
+      if (activeSupervisors.length > 0) {
+        if (activeSupervisors.length === 1) {
+          // If exactly 1 active supervisor, assign them to all shifts in the calendar
+          finalSchedule = schedule.map(entry => ({
+            ...entry,
+            onCallPerson: activeSupervisors[0]
+          }));
+        } else {
+          // If multiple active supervisors, reconcile any missing or obsolete supervisors
+          const activeSet = new Set(activeSupervisors);
+          const needsSupervisorReconcile = schedule.some(
+            s => !s.onCallPerson || !activeSet.has(s.onCallPerson)
+          );
+
+          if (needsSupervisorReconcile) {
+            let supIndex = 0;
+            finalSchedule = schedule.map((entry, idx) => {
+              if (entry.dayName === 'شنبه' && idx > 0) {
+                supIndex = (supIndex + 1) % activeSupervisors.length;
+              }
+              return {
+                ...entry,
+                onCallPerson: activeSet.has(entry.onCallPerson) ? entry.onCallPerson : activeSupervisors[supIndex]
+              };
+            });
+          }
+        }
+        setSchedule(finalSchedule);
+      }
+
+      // 3. Immediately persist to localStorage
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(finalSchedule));
+      localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(distinctPersonnel));
       localStorage.setItem(STORAGE_KEYS.LOCKED, JSON.stringify(unlockedMonths));
       if (publishedRange && publishedRange.isActive) {
         localStorage.setItem(STORAGE_KEYS.PUBLISHED_RANGE, JSON.stringify(publishedRange));
@@ -388,11 +446,11 @@ const App: React.FC = () => {
       }
       localStorage.setItem(STORAGE_KEYS.PASSWORD, adminPassword);
 
-      // 2. Immediately commit to Firestore cloud database
+      // 4. Immediately commit to Firestore cloud database
       setSyncStatus('syncing');
       await saveCloudRoster({
-        schedule,
-        personnelList,
+        schedule: finalSchedule,
+        personnelList: distinctPersonnel,
         unlockedMonths,
         publishedRange,
         adminPassword,
@@ -401,7 +459,7 @@ const App: React.FC = () => {
       setSyncStatus('synced');
       setSaveNotice({
         type: 'success',
-        message: 'تمامی تغییرات با موفقیت در فضای ابری ذخیره شد و در پنل تمامی کاربران اعمال گردید.'
+        message: 'تمامی تغییرات، رنگ‌های اختصاصی و سرپرستان با موفقیت در فضای ابری ذخیره شده و در داشبورد اعمال گردید.'
       });
 
       setTimeout(() => {
@@ -468,6 +526,13 @@ const App: React.FC = () => {
   const shiftWorkers = personnelList.filter(p => p.isActive && p.roles.includes('Shift')).map(p => p.name);
   const supervisors = personnelList.filter(p => p.isActive && p.roles.includes('Supervisor')).map(p => p.name);
 
+  // Available months across schedule
+  const availableMonths = useMemo(() => {
+    return Array.from(new Set(schedule.map(s => s.date.substring(0, 7)))).sort();
+  }, [schedule]);
+
+
+
   // --- SWAP & EDIT TOOL STATE ---
   const [swapTool, setSwapTool] = useState<{
     date: string;
@@ -496,11 +561,8 @@ const App: React.FC = () => {
 
   // --- PERSONNEL MANAGEMENT ---
   const [newPersonName, setNewPersonName] = useState('');
-  const [newPersonColor, setNewPersonColor] = useState('');
-  const [activeColorPickerName, setActiveColorPickerName] = useState<string | null>(null);
   
   const handleStartAddingPersonnel = (role: 'Shift' | 'Supervisor') => {
-    setNewPersonColor(getNextPersonnelColor(personnelList));
     setNewPersonName('');
     if (role === 'Shift') {
       setIsAddingShiftPerson(true);
@@ -512,42 +574,98 @@ const App: React.FC = () => {
   };
 
   const handleAddPersonnel = (role: 'Shift' | 'Supervisor') => {
-    if (!newPersonName.trim()) return;
-    if (personnelList.some(p => p.name.trim() === newPersonName.trim())) {
+    const trimmedName = newPersonName.trim();
+    if (!trimmedName) return;
+    if (personnelList.some(p => p.name.trim() === trimmedName)) {
         alert('این نام قبلا ثبت شده است.');
         return;
     }
     
-    const assignedColor = newPersonColor || getNextPersonnelColor(personnelList);
-
-    setPersonnelList([...personnelList, {
-      name: newPersonName.trim(),
+    // Automatically assign next distinct non-duplicate color from palette
+    const assignedColor = getNextPersonnelColor(personnelList);
+    const newPerson: Personnel = {
+      name: trimmedName,
       roles: [role],
       isActive: true,
       color: assignedColor
-    }]);
+    };
+
+    const updatedList = [...personnelList, newPerson];
+    setPersonnelList(updatedList);
     setNewPersonName('');
-    setNewPersonColor('');
     
     // Close the add form
-    if (role === 'Shift') setIsAddingShiftPerson(false);
-    else setIsAddingSupervisor(false);
-  };
+    if (role === 'Shift') {
+      setIsAddingShiftPerson(false);
+    } else {
+      setIsAddingSupervisor(false);
+      // Auto-assign to schedule if this is the only active supervisor or if existing shifts have missing/orphaned supervisors
+      const activeSupervisors = updatedList
+        .filter(p => p.roles.includes('Supervisor') && p.isActive)
+        .map(p => p.name);
 
-  const handleUpdatePersonnelColor = (name: string, color: string) => {
-    setPersonnelList(prev => prev.map(p => p.name === name ? { ...p, color } : p));
+      if (activeSupervisors.length === 1) {
+        setSchedule(prev => prev.map(entry => ({
+          ...entry,
+          onCallPerson: trimmedName
+        })));
+      } else {
+        setSchedule(prev => prev.map(entry => {
+          if (!entry.onCallPerson || !activeSupervisors.includes(entry.onCallPerson)) {
+            return { ...entry, onCallPerson: trimmedName };
+          }
+          return entry;
+        }));
+      }
+    }
   };
 
   const handleRemovePersonnel = (name: string) => {
-    if (confirm(`آیا از حذف ${name} اطمینان دارید؟`)) {
-      setPersonnelList(personnelList.filter(p => p.name !== name));
-    }
+    const remainingPersonnel = personnelList.filter(p => p.name !== name);
+    setPersonnelList(remainingPersonnel);
+
+    const remainingSupervisors = remainingPersonnel
+      .filter(p => p.roles.includes('Supervisor') && p.isActive)
+      .map(p => p.name);
+
+    const remainingShiftWorkers = remainingPersonnel
+      .filter(p => p.roles.includes('Shift') && p.isActive)
+      .map(p => p.name);
+
+    // Automatically reassign shifts so orphaned names never linger in schedule or dashboard
+    setSchedule(prev => prev.map(entry => {
+      let item = { ...entry };
+      if (item.onCallPerson === name) {
+        item.onCallPerson = remainingSupervisors.length > 0 ? remainingSupervisors[0] : 'نامشخص';
+      }
+      if (item.dayShiftPerson === name) {
+        item.dayShiftPerson = remainingShiftWorkers.length > 0 ? remainingShiftWorkers[0] : 'نامشخص';
+      }
+      if (item.nightShiftPerson === name) {
+        item.nightShiftPerson = remainingShiftWorkers.length > 0 ? remainingShiftWorkers[0] : 'نامشخص';
+      }
+      return item;
+    }));
   };
   
   const handleToggleActive = (name: string) => {
-      setPersonnelList(personnelList.map(p => 
+      const updatedList = personnelList.map(p => 
           p.name === name ? { ...p, isActive: !p.isActive } : p
-      ));
+      );
+      setPersonnelList(updatedList);
+
+      const activeSupervisors = updatedList
+        .filter(p => p.roles.includes('Supervisor') && p.isActive)
+        .map(p => p.name);
+
+      if (activeSupervisors.length > 0) {
+        setSchedule(prev => prev.map(entry => {
+          if (!activeSupervisors.includes(entry.onCallPerson)) {
+            return { ...entry, onCallPerson: activeSupervisors[0] };
+          }
+          return entry;
+        }));
+      }
   };
 
   const movePersonnel = (name: string, direction: 'up' | 'down', roleFilter: 'Shift' | 'Supervisor') => {
@@ -845,13 +963,29 @@ const App: React.FC = () => {
   const currentMonthData = schedule.filter(s => s.date.startsWith(`${currentYear}/${currentMonth.code}`));
   // Helper to get current selection stats for Swap Tool
   const currentSwapEntry = swapTool.date ? schedule.find(s => s.date === swapTool.date) : null;
-  // Get available months for batch edit
-  const availableMonths = Array.from(new Set(schedule.map(s => s.date.substring(0, 7)))).sort();
+
+  if (isCloudLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-white font-sans dir-rtl select-none">
+        <div className="w-16 h-16 relative flex items-center justify-center mb-6">
+          <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-ping"></div>
+          <div className="w-12 h-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+        </div>
+        <div className="bg-emerald-600 text-white px-3.5 py-1.5 rounded-xl font-black text-xl mb-3 shadow-lg shadow-emerald-950/40" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+          FMD
+        </div>
+        <h2 className="text-lg sm:text-xl font-black mb-2 text-slate-100">سامانه شیفت تولید</h2>
+        <p className="text-xs sm:text-sm text-slate-400 text-center max-w-xs leading-relaxed">
+          در حال بارگذاری و دریافت آخرین نسخه ثبت‌شده از سرور ابری...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-12">
       {/* Navbar */}
-      <nav className="main-navbar bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+      <nav className="main-navbar bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 no-print shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center gap-2">
@@ -1047,7 +1181,7 @@ const App: React.FC = () => {
              <div className="max-w-4xl mx-auto space-y-6">
                 
                 {/* Top Save & Action Bar */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-4 z-30">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-[4.5rem] z-20">
                     <div className="flex items-center gap-3 text-right w-full sm:w-auto">
                         <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
                             <Settings size={22} />
@@ -1134,47 +1268,30 @@ const App: React.FC = () => {
                                 افزودن کارشناس جدید
                              </button>
                         ) : (
-                            <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
-                                <div className="flex gap-2">
-                                    <input 
-                                        autoFocus
-                                        type="text" 
-                                        placeholder="نام کارشناس جدید..." 
-                                        className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 bg-white"
-                                        value={newPersonName}
-                                        onChange={(e) => setNewPersonName(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
-                                    />
-                                    <button 
-                                        onClick={() => { setIsAddingShiftPerson(false); setNewPersonName(''); setNewPersonColor(''); }}
-                                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
-                                        title="انصراف"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleAddPersonnel('Shift')}
-                                        className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
-                                    >
-                                        <Check size={18} />
-                                        تایید
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-2 pt-2 border-t border-slate-200/70">
-                                    <span className="text-xs font-bold text-slate-600">رنگ اختصاصی در نمودار:</span>
-                                    <div className="flex flex-wrap gap-1.5 items-center">
-                                        {PERSONNEL_COLOR_PALETTE.slice(0, 10).map((c) => (
-                                            <button
-                                                key={c}
-                                                type="button"
-                                                onClick={() => setNewPersonColor(c)}
-                                                className={`w-5 h-5 rounded-full transition-all ${newPersonColor === c ? 'ring-2 ring-offset-1 ring-slate-800 scale-110 shadow-xs' : 'opacity-75 hover:opacity-100 hover:scale-105'}`}
-                                                style={{ backgroundColor: c }}
-                                                title={c}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="flex gap-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                                <input 
+                                    autoFocus
+                                    type="text" 
+                                    placeholder="نام کارشناس جدید..." 
+                                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 bg-white"
+                                    value={newPersonName}
+                                    onChange={(e) => setNewPersonName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Shift')}
+                                />
+                                <button 
+                                    onClick={() => { setIsAddingShiftPerson(false); setNewPersonName(''); }}
+                                    className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
+                                    title="انصراف"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleAddPersonnel('Shift')}
+                                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
+                                >
+                                    <Check size={18} />
+                                    تایید
+                                </button>
                             </div>
                         )}
 
@@ -1185,32 +1302,12 @@ const App: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <div className={`w-2 h-2 rounded-full ${person.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                                         
-                                        {/* Color Badge / Swatch */}
-                                        <div className="relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveColorPickerName(activeColorPickerName === person.name ? null : person.name)}
-                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs hover:scale-125 transition-transform cursor-pointer block ring-1 ring-slate-200/80"
-                                                style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
-                                                title="تغییر رنگ اختصاصی در نمودار"
-                                            />
-                                            {activeColorPickerName === person.name && (
-                                                <div className="absolute right-0 top-6 z-50 bg-white p-2.5 rounded-xl shadow-xl border border-slate-200 grid grid-cols-6 gap-1.5 w-48 animate-in fade-in zoom-in-95">
-                                                    {PERSONNEL_COLOR_PALETTE.map((c) => (
-                                                        <button
-                                                            key={c}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                handleUpdatePersonnelColor(person.name, c);
-                                                                setActiveColorPickerName(null);
-                                                            }}
-                                                            className={`w-5 h-5 rounded-full hover:scale-110 transition-transform ${person.color === c ? 'ring-2 ring-offset-1 ring-slate-900 scale-110' : ''}`}
-                                                            style={{ backgroundColor: c }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Automatic Distinct Color Indicator */}
+                                        <div 
+                                            className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs shrink-0 ring-1 ring-slate-200"
+                                            style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
+                                            title="رنگ اختصاصی در نمودار (خودکار)"
+                                        />
 
                                         <span className={`font-medium ${person.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
                                             {person.name}
@@ -1272,47 +1369,30 @@ const App: React.FC = () => {
                                 افزودن سرپرست جدید
                              </button>
                         ) : (
-                            <div className="flex flex-col gap-2.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
-                                <div className="flex gap-2">
-                                    <input 
-                                        autoFocus
-                                        type="text" 
-                                        placeholder="نام سرپرست جدید..." 
-                                        className="w-32 sm:flex-1 border border-slate-300 rounded-lg px-2 sm:px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
-                                        value={newPersonName}
-                                        onChange={(e) => setNewPersonName(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
-                                    />
-                                    <button 
-                                        onClick={() => { setIsAddingSupervisor(false); setNewPersonName(''); setNewPersonColor(''); }}
-                                        className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
-                                        title="انصراف"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleAddPersonnel('Supervisor')}
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
-                                    >
-                                        <Check size={18} />
-                                        تایید
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-2 pt-2 border-t border-slate-200/70">
-                                    <span className="text-xs font-bold text-slate-600">رنگ اختصاصی در نمودار:</span>
-                                    <div className="flex flex-wrap gap-1.5 items-center">
-                                        {PERSONNEL_COLOR_PALETTE.slice(0, 10).map((c) => (
-                                            <button
-                                                key={c}
-                                                type="button"
-                                                onClick={() => setNewPersonColor(c)}
-                                                className={`w-5 h-5 rounded-full transition-all ${newPersonColor === c ? 'ring-2 ring-offset-1 ring-slate-800 scale-110 shadow-xs' : 'opacity-75 hover:opacity-100 hover:scale-105'}`}
-                                                style={{ backgroundColor: c }}
-                                                title={c}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="flex gap-2 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in fade-in slide-in-from-top-2">
+                                <input 
+                                    autoFocus
+                                    type="text" 
+                                    placeholder="نام سرپرست جدید..." 
+                                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-900 bg-white"
+                                    value={newPersonName}
+                                    onChange={(e) => setNewPersonName(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddPersonnel('Supervisor')}
+                                />
+                                <button 
+                                    onClick={() => { setIsAddingSupervisor(false); setNewPersonName(''); }}
+                                    className="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-lg transition"
+                                    title="انصراف"
+                                >
+                                    <X size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleAddPersonnel('Supervisor')}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition font-bold text-sm"
+                                >
+                                    <Check size={18} />
+                                    تایید
+                                </button>
                             </div>
                         )}
 
@@ -1323,32 +1403,12 @@ const App: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <div className={`w-2 h-2 rounded-full ${person.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                                         
-                                        {/* Color Badge / Swatch */}
-                                        <div className="relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveColorPickerName(activeColorPickerName === person.name ? null : person.name)}
-                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs hover:scale-125 transition-transform cursor-pointer block ring-1 ring-slate-200/80"
-                                                style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
-                                                title="تغییر رنگ اختصاصی در نمودار"
-                                            />
-                                            {activeColorPickerName === person.name && (
-                                                <div className="absolute right-0 top-6 z-50 bg-white p-2.5 rounded-xl shadow-xl border border-slate-200 grid grid-cols-6 gap-1.5 w-48 animate-in fade-in zoom-in-95">
-                                                    {PERSONNEL_COLOR_PALETTE.map((c) => (
-                                                        <button
-                                                            key={c}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                handleUpdatePersonnelColor(person.name, c);
-                                                                setActiveColorPickerName(null);
-                                                            }}
-                                                            className={`w-5 h-5 rounded-full hover:scale-110 transition-transform ${person.color === c ? 'ring-2 ring-offset-1 ring-slate-900 scale-110' : ''}`}
-                                                            style={{ backgroundColor: c }}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Automatic Distinct Color Indicator */}
+                                        <div 
+                                            className="w-3.5 h-3.5 rounded-full border border-black/10 shadow-2xs shrink-0 ring-1 ring-slate-200"
+                                            style={{ backgroundColor: person.color || getPersonColor(person.name, personnelList) }}
+                                            title="رنگ اختصاصی در نمودار (خودکار)"
+                                        />
 
                                         <span className={`font-medium ${person.isActive ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
                                             {person.name}

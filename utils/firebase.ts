@@ -149,20 +149,32 @@ export function subscribeToCloudRoster(
 }
 
 /**
+ * Sanitizes an object before writing to Firestore by removing any keys with `undefined` values.
+ * Firestore throws a runtime exception if any field in an object or array is `undefined`.
+ */
+function cleanFirestoreData<T>(obj: T): T {
+  return JSON.parse(
+    JSON.stringify(obj, (_key, value) => {
+      if (value === undefined) {
+        return undefined; // JSON.stringify omits keys with undefined values
+      }
+      return value;
+    })
+  );
+}
+
+/**
  * Saves or updates roster data to Firestore.
  */
 export async function saveCloudRoster(
   data: Partial<CloudRosterState>
 ): Promise<void> {
   const docRef = doc(db, ROSTER_DOC_PATH, ROSTER_DOC_ID);
-  await setDoc(
-    docRef,
-    {
-      ...data,
-      updatedAt: new Date().toISOString()
-    },
-    { merge: true }
-  );
+  const payload = cleanFirestoreData({
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+  await setDoc(docRef, payload, { merge: true });
 }
 
 /**
@@ -172,8 +184,9 @@ export async function resetCloudRoster(
   data: CloudRosterState
 ): Promise<void> {
   const docRef = doc(db, ROSTER_DOC_PATH, ROSTER_DOC_ID);
-  await setDoc(docRef, {
+  const payload = cleanFirestoreData({
     ...data,
     updatedAt: new Date().toISOString()
   });
+  await setDoc(docRef, payload);
 }

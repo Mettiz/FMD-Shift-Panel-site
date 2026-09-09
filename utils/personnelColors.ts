@@ -1,41 +1,42 @@
 /**
- * Personnel Color Utilities - v1.0.1
+ * Personnel Color Utilities - v1.0.2
+ * Provides high-contrast, distinguishable colors without duplicates
  */
 import { Personnel } from '../types';
 
 export const PERSONNEL_COLOR_PALETTE: string[] = [
-  '#2563eb', // Royal Blue (لسانی)
-  '#059669', // Emerald Green (سامان)
-  '#e11d48', // Rose Red (سلیمان فلاح)
-  '#7c3aed', // Purple / Violet (سالاروند)
-  '#ea580c', // Bright Orange (دهقان)
-  '#0891b2', // Cyan (منصوری)
-  '#db2777', // Magenta Pink (گودرزی)
-  '#d97706', // Amber Gold
-  '#0d9488', // Deep Teal
+  '#2563eb', // Royal Blue
+  '#059669', // Emerald Green
+  '#dc2626', // Crimson Red
+  '#d97706', // Vibrant Amber Gold
+  '#7c3aed', // Deep Violet
+  '#0891b2', // Ocean Cyan
+  '#db2777', // Rose Pink
+  '#ea580c', // Bright Orange
+  '#15803d', // Forest Pine Green
   '#4f46e5', // Indigo
-  '#16a34a', // Leaf Green
-  '#c026d3', // Fuchsia
-  '#0284c7', // Sky Blue
-  '#9333ea', // Deep Purple
-  '#ca8a04', // Golden Olive
-  '#b91c1c', // Crimson Ruby
-  '#4338ca', // Dark Indigo
-  '#047857', // Forest Green
+  '#c026d3', // Electric Fuchsia
+  '#0f766e', // Deep Teal
+  '#b91c1c', // Ruby Crimson
+  '#854d0e', // Bronze Ochre
+  '#9333ea', // Royal Purple
+  '#0284c7', // Sky Cerulean
   '#c2410c', // Burnt Orange
-  '#6d28d9', // Deep Violet
-  '#be185d', // Deep Rose Berry
-  '#0f766e', // Marine Teal
-  '#1d4ed8', // Dark Blue
-  '#854d0e', // Bronze
+  '#4338ca', // Dark Indigo
+  '#16a34a', // Bright Green
+  '#be185d', // Berry Magenta
+  '#047857', // Mint Deep Green
+  '#6d28d9', // Dark Purple
+  '#a16207', // Warm Olive Bronze
+  '#1e40af', // Navy Cobalt
 ];
 
 // Historical known default color mappings
 const KNOWN_STAFF_COLORS: Record<string, string> = {
   'لسانی': '#2563eb',
   'سامان': '#059669',
-  'سلیمان': '#e11d48',
-  'فلاح': '#e11d48',
+  'سلیمان': '#dc2626',
+  'فلاح': '#dc2626',
   'سالاروند': '#7c3aed',
   'دهقان': '#ea580c',
   'منصوری': '#0891b2',
@@ -43,25 +44,68 @@ const KNOWN_STAFF_COLORS: Record<string, string> = {
 };
 
 /**
- * Get next available distinct color from the palette for a new personnel
+ * Get next available distinct color from the palette for a new personnel,
+ * guaranteeing no duplicate colors among personnel.
  */
 export const getNextPersonnelColor = (existingPersonnel: Personnel[]): string => {
   const usedColors = new Set(
     existingPersonnel
-      .map(p => p.color?.toLowerCase())
+      .map(p => p.color?.trim().toLowerCase())
       .filter((c): c is string => Boolean(c))
   );
 
-  // Find first unused color from palette
+  // 1. Find first unused color from distinct palette
   for (const color of PERSONNEL_COLOR_PALETTE) {
     if (!usedColors.has(color.toLowerCase())) {
       return color;
     }
   }
 
-  // If all colors are used, pick by index mod palette length or generate shifted hue
-  const index = existingPersonnel.length % PERSONNEL_COLOR_PALETTE.length;
-  return PERSONNEL_COLOR_PALETTE[index];
+  // 2. If palette is exhausted, generate with golden-ratio hue distribution for maximum contrast
+  const count = existingPersonnel.length;
+  const hue = Math.round((count * 137.508) % 360);
+  return `hsl(${hue}, 75%, 45%)`;
+};
+
+/**
+ * Automatically audits personnel list and resolves any duplicate or missing colors,
+ * ensuring every person has a completely unique, distinguishable color.
+ */
+export const ensureUniquePersonnelColors = (personnelList: Personnel[]): Personnel[] => {
+  const usedColors = new Set<string>();
+  let paletteIndex = 0;
+
+  return personnelList.map(person => {
+    const currentColor = person.color?.trim().toLowerCase();
+
+    // If person has a unique valid color, keep it
+    if (currentColor && !usedColors.has(currentColor)) {
+      usedColors.add(currentColor);
+      return person;
+    }
+
+    // Otherwise assign next distinct unused color
+    let chosenColor = '';
+    while (paletteIndex < PERSONNEL_COLOR_PALETTE.length) {
+      const candidate = PERSONNEL_COLOR_PALETTE[paletteIndex].toLowerCase();
+      paletteIndex++;
+      if (!usedColors.has(candidate)) {
+        chosenColor = candidate;
+        break;
+      }
+    }
+
+    if (!chosenColor) {
+      const hue = Math.round((usedColors.size * 137.508) % 360);
+      chosenColor = `hsl(${hue}, 75%, 45%)`;
+    }
+
+    usedColors.add(chosenColor.toLowerCase());
+    return {
+      ...person,
+      color: chosenColor
+    };
+  });
 };
 
 /**
