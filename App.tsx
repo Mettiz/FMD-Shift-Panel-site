@@ -6,7 +6,7 @@ import { DataManagement } from './components/DataManagement';
 import { SCHEDULE_DATA } from './constants';
 import { INITIAL_STAFF, generateNextMonth, getDaysInPersianMonth, validateSwap } from './utils/scheduler';
 import { ShiftEntry, Personnel, AppData, PublishedRange } from './types';
-import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette, Cloud, CloudUpload, Wifi } from 'lucide-react';
+import { Settings, Plus, Trash2, Save, ArrowUp, ArrowDown, UserCog, Users, ArrowRightLeft, AlertCircle, CheckCircle2, Edit, Calendar as CalendarIcon, List, Table as TableIcon, Check, Lock, X, KeyRound, CalendarPlus, Crown, LogOut, ShieldCheck, Palette, Cloud, CloudUpload, Wifi, RefreshCw } from 'lucide-react';
 import { getTodayPersianParts, getDayNameForJalali } from './utils/persianDate';
 import { PERSONNEL_COLOR_PALETTE, getNextPersonnelColor, getPersonColor } from './utils/personnelColors';
 import { subscribeToCloudRoster, saveCloudRoster, resetCloudRoster } from './utils/firebase';
@@ -352,6 +352,61 @@ const App: React.FC = () => {
       }
     };
   }, [schedule, personnelList, unlockedMonths, publishedRange, adminPassword]);
+
+  // --- MANUAL SAVE & APPLY CHANGES (SETTINGS) ---
+  const [isSavingChanges, setIsSavingChanges] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleManualSaveChanges = async () => {
+    setIsSavingChanges(true);
+    setSaveNotice(null);
+    try {
+      // Clear pending debounced timer
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      // 1. Immediately persist to localStorage
+      localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(schedule));
+      localStorage.setItem(STORAGE_KEYS.PERSONNEL, JSON.stringify(personnelList));
+      localStorage.setItem(STORAGE_KEYS.LOCKED, JSON.stringify(unlockedMonths));
+      if (publishedRange && publishedRange.isActive) {
+        localStorage.setItem(STORAGE_KEYS.PUBLISHED_RANGE, JSON.stringify(publishedRange));
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.PUBLISHED_RANGE);
+      }
+      localStorage.setItem(STORAGE_KEYS.PASSWORD, adminPassword);
+
+      // 2. Immediately commit to Firestore cloud database
+      setSyncStatus('syncing');
+      await saveCloudRoster({
+        schedule,
+        personnelList,
+        unlockedMonths,
+        publishedRange,
+        adminPassword,
+      });
+
+      setSyncStatus('synced');
+      setSaveNotice({
+        type: 'success',
+        message: 'تمامی تغییرات با موفقیت در فضای ابری ذخیره شد و در پنل تمامی کاربران اعمال گردید.'
+      });
+
+      setTimeout(() => {
+        setSaveNotice(null);
+      }, 5000);
+    } catch (err) {
+      console.error('Manual save failed:', err);
+      setSyncStatus('offline');
+      setSaveNotice({
+        type: 'error',
+        message: 'خطا در برقراری ارتباط با سرور ابری. تغییرات در حافظه مرورگر ذخیره شد، لطفاً اتصال اینترنت را بررسی کنید.'
+      });
+    } finally {
+      setIsSavingChanges(false);
+    }
+  };
 
 
   // Calendar State - Defaults to today's Iranian date
@@ -978,18 +1033,74 @@ const App: React.FC = () => {
              )}
 
              {/* 4. Settings Content (Visible but covered by shield if locked) */}
-             <div className="max-w-4xl mx-auto space-y-8">
+             <div className="max-w-4xl mx-auto space-y-6">
                 
-                {/* Header Actions */}
-                <div className="flex justify-end">
-                    <button 
-                        onClick={() => setChangePwdOpen(true)}
-                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-emerald-600 transition font-bold px-3 py-2 rounded-lg hover:bg-emerald-50"
-                    >
-                        <KeyRound size={16} />
-                        تغییر رمز عبور
-                    </button>
+                {/* Top Save & Action Bar */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 sticky top-4 z-30">
+                    <div className="flex items-center gap-3 text-right w-full sm:w-auto">
+                        <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                            <Settings size={22} />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-black text-slate-900">تنظیمات سیستم و پرسنل</h2>
+                            <p className="text-xs text-slate-500 mt-0.5">برای اعمال و انتشار تغییرات در پنل بازدیدکنندگان، دکمه ذخیره را بزنید</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                        <button 
+                            type="button"
+                            onClick={() => setChangePwdOpen(true)}
+                            className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-emerald-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 transition font-bold px-3.5 py-2.5 rounded-xl cursor-pointer"
+                        >
+                            <KeyRound size={16} />
+                            تغییر رمز
+                        </button>
+
+                        <button 
+                            type="button"
+                            id="btn-save-settings-top"
+                            onClick={handleManualSaveChanges}
+                            disabled={isSavingChanges}
+                            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:bg-slate-400 text-white font-black text-sm px-6 py-2.5 rounded-xl shadow-md hover:shadow-emerald-600/25 transition-all cursor-pointer"
+                        >
+                            {isSavingChanges ? (
+                                <>
+                                    <RefreshCw size={17} className="animate-spin" />
+                                    <span>در حال ذخیره...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={18} />
+                                    <span>ذخیره تغییرات</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
+
+                {/* Success / Error Notification */}
+                {saveNotice && (
+                    <div className={`p-4 rounded-xl shadow-md flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 ${
+                        saveNotice.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+                    }`}>
+                        <div className="flex items-center gap-2.5 font-bold text-sm">
+                            {saveNotice.type === 'success' ? (
+                                <CheckCircle2 size={20} className="shrink-0 text-emerald-100" />
+                            ) : (
+                                <AlertCircle size={20} className="shrink-0 text-red-100" />
+                            )}
+                            <span>{saveNotice.message}</span>
+                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => setSaveNotice(null)} 
+                            className="text-white/80 hover:text-white p-1 cursor-pointer"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+                )}
 
                 {/* 1. Experts Section */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -1542,6 +1653,39 @@ const App: React.FC = () => {
                     onImport={handleImport}
                     onReset={handleReset}
                 />
+
+                {/* Bottom Action Panel */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-right">
+                        <h3 className="font-black text-base text-slate-800 flex items-center gap-2">
+                            <Save className="text-emerald-600" size={20} />
+                            اعمال و ذخیره نهایی کلیه تغییرات
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                            با کلیک روی این دکمه، تمام تنظیمات و جابجایی‌ها به صورت آنی در دیتابیس ابری ثبت شده و به همه بازدیدکنندگان نمایش داده می‌شود.
+                        </p>
+                    </div>
+
+                    <button 
+                        type="button"
+                        id="btn-save-settings-bottom"
+                        onClick={handleManualSaveChanges}
+                        disabled={isSavingChanges}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 disabled:bg-slate-400 text-white font-black text-sm px-8 py-3.5 rounded-xl shadow-lg hover:shadow-emerald-600/25 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                        {isSavingChanges ? (
+                            <>
+                                <RefreshCw size={19} className="animate-spin" />
+                                <span>در حال ذخیره و اعمال تغییرات...</span>
+                            </>
+                        ) : (
+                            <>
+                                <CheckCircle2 size={19} />
+                                <span>ذخیره کلیه تغییرات</span>
+                            </>
+                        )}
+                    </button>
+                </div>
              </div>
           </div>
         )}
