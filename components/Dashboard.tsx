@@ -946,10 +946,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <th className="border border-slate-700 py-1.5 px-1 text-center">تاریخ</th>
                             <th className="border border-slate-700 py-1.5 px-1 text-center">نوع روز</th>
                             <th className="border border-slate-700 py-1.5 px-1 text-center">
-                                شیفت روز (۱۹ - ۰۸)
+                                شیفت روز (۰۸ - ۱۹)
                             </th>
                             <th className="border border-slate-700 py-1.5 px-1 text-center">
-                                شیفت شب (۰۸ - ۱۹)
+                                شیفت شب (۱۹ - ۰۸)
                             </th>
                             <th className="border border-slate-700 py-1.5 px-1 text-center">
                                 سرپرست (On-Call)
@@ -1095,8 +1095,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <tr>
                        <th className="p-4 print:p-1 border border-slate-200 print:border-black">روز</th>
                        <th className="p-4 print:p-1 border border-slate-200 print:border-black">تاریخ</th>
-                       <th className="p-4 print:p-1 border border-slate-200 print:border-black">شیفت روز (۱۹ - ۰۸)</th>
-                       <th className="p-4 print:p-1 border border-slate-200 print:border-black">شیفت شب (۰۸ - ۱۹)</th>
+                       <th className="p-4 print:p-1 border border-slate-200 print:border-black">شیفت روز (۰۸ - ۱۹)</th>
+                       <th className="p-4 print:p-1 border border-slate-200 print:border-black">شیفت شب (۱۹ - ۰۸)</th>
                        <th className="p-4 print:p-1 border border-slate-200 print:border-black">سرپرست (On-Call)</th>
                      </tr>
                    </thead>

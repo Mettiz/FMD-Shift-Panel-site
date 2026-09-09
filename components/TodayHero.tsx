@@ -90,13 +90,13 @@ export const TodayHero: React.FC<TodayHeroProps> = ({ schedule, onNavigateToToda
                
                {/* Day Shift */}
                <div className="flex flex-col gap-1 items-stretch">
-                 <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت روز (۱۹ - ۰۸)</span>
+                 <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت روز (۰۸ - ۱۹)</span>
                  <ShiftUserCard name={todayEntry.dayShiftPerson} type="Day" showIcon={true} />
                </div>
 
                {/* Night Shift */}
                <div className="flex flex-col gap-1 items-stretch">
-                 <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت شب (۰۸ - ۱۹)</span>
+                 <span className="text-xs font-bold text-slate-400 pr-1 text-right">شیفت شب (۱۹ - ۰۸)</span>
                  <ShiftUserCard name={todayEntry.nightShiftPerson} type="Night" showIcon={true} />
                </div>
              </div>
